@@ -5,7 +5,6 @@
 # http://www.gnu.org/licenses/gpl-3.0.html
 
 import datetime
-import logging
 import re
 
 from core.util import dedupe, nonone
@@ -87,19 +86,16 @@ def clean_date(str_date):
     return match.group() if match is not None else None
 
 def guess_date_format(str_dates, formats_to_try):
+    if not str_dates:
+        return None
     for format in dedupe(formats_to_try):
-        found_at_least_one = False
         for str_date in str_dates:
             try:
                 datetime.datetime.strptime(str_date, format)
-                found_at_least_one = True
             except ValueError:
-                logging.debug("Failed try to read the date %s with the format %s", str_date, format)
                 break
         else:
-            if found_at_least_one:
-                logging.debug("Correct date format: %s", format)
-                return format
+            return format
     return None
 
 def parse_date_str(date_str, date_format):
