@@ -1,4 +1,4 @@
-PYTHON ?= python
+PYTHON ?= python3
 
 SRCS = currency.c amount.c account.c accounts.c split.c transaction.c \
 	transactions.c entry.c util.c undo.c recurrence.c

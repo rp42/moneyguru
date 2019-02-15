@@ -124,11 +124,13 @@ part of this repo as git submodules:
 
 On Ubuntu, the apt-get command to install all pre-requisites is:
 
-    $ apt-get install python3-dev python3-pyqt5 pyqt5-dev-tools libsqlite3-dev
+    $ apt-get install python3-dev python3-pyqt5 pyqt5-dev-tools libsqlite3-dev \
+        glib2.0-dev gettext
 
 On Gentoo, it's:
 
-    $ USE="gui widgets printsupport" emerge PyQt5 dev-db/sqlite
+    $ USE="gui widgets printsupport" emerge PyQt5 
+    $ emerge dev-libs/glib:2 dev-db/sqlite sys-devel/gettext
 
 ### make
 

@@ -21,6 +21,8 @@ mofiles = $(patsubst %.po,%.mo,$(pofiles))
 vpath %.po $(localedirs)
 vpath %.mo $(localedirs)
 
+export PYTHON
+
 all: qt/mg_rc.py run.py $(CCORE_DEST) | i18n reqs
 	@echo "Build complete! You can run moneyGuru with 'make run'"
 
