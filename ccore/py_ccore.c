@@ -3206,15 +3206,6 @@ PyRecurrence_ref(PyRecurrence *self)
     return (PyObject *)self->ref;
 }
 
-static int
-PyRecurrence_ref_set(PyRecurrence *self, PyTransaction *value)
-{
-    Py_DECREF(self->ref);
-    self->ref = value;
-    Py_INCREF(self->ref);
-    return 0;
-}
-
 static PyObject *
 PyRecurrence_date2exception(PyRecurrence *self)
 {
@@ -4112,7 +4103,7 @@ static PyGetSetDef PyRecurrence_getseters[] = {
     {"stop_date", (getter)PyRecurrence_stop_date, NULL, NULL, NULL},
     {"repeat_type", (getter)PyRecurrence_repeat_type, NULL, NULL, NULL},
     {"repeat_every", (getter)PyRecurrence_repeat_every, NULL, NULL, NULL},
-    {"ref", (getter)PyRecurrence_ref, (setter)PyRecurrence_ref_set, NULL, NULL},
+    {"ref", (getter)PyRecurrence_ref, NULL, NULL, NULL},
     {"date2exception", (getter)PyRecurrence_date2exception, NULL, NULL, NULL},
     {"date2globalchange", (getter)PyRecurrence_date2globalchange, NULL, NULL, NULL},
     {0, 0, 0, 0, 0},
