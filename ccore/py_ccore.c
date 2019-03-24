@@ -1517,19 +1517,6 @@ PyTransaction_is_spawn(PyTransaction *self)
 }
 
 static PyObject *
-PyTransaction_is_budget(PyTransaction *self)
-{
-    if (self->txn->ref == NULL) {
-        Py_RETURN_FALSE;
-    }
-    if (self->txn->type == TXN_TYPE_BUDGET) {
-        Py_RETURN_TRUE;
-    } else {
-        Py_RETURN_FALSE;
-    }
-}
-
-static PyObject *
 PyTransaction_amount_for_account(PyTransaction *self, PyObject *args)
 {
     PyObject *account_p;
@@ -2026,12 +2013,6 @@ PyEntry_balance(PyEntry *self)
 }
 
 static PyObject *
-PyEntry_balance_with_budget(PyEntry *self)
-{
-    return pyamount(&self->entry.balance_with_budget);
-}
-
-static PyObject *
 PyEntry_checkno(PyEntry *self)
 {
     return _strget(self->entry.txn->checkno);
@@ -2266,9 +2247,8 @@ PyEntryList_balance(PyEntryList *self, PyObject *args)
 {
     PyObject *date_p;
     char *currency;
-    int with_budget = false;
 
-    if (!PyArg_ParseTuple(args, "Os|p", &date_p, &currency, &with_budget)) {
+    if (!PyArg_ParseTuple(args, "Os", &date_p, &currency)) {
         return NULL;
     }
 
@@ -2281,7 +2261,7 @@ PyEntryList_balance(PyEntryList *self, PyObject *args)
     if (date == -1) {
         return NULL;
     }
-    if (!entries_balance(self->entries, &dst, date, with_budget)) {
+    if (!entries_balance(self->entries, &dst, date)) {
         return NULL;
     } else {
         return pyamount(&dst);
@@ -2341,7 +2321,7 @@ PyEntryList_normal_balance(PyEntryList *self, PyObject *args)
     if (date == -1) {
         return NULL;
     }
-    if (!entries_balance(self->entries, &res, date, false)) {
+    if (!entries_balance(self->entries, &res, date)) {
         return NULL;
     } else {
         account_normalize_amount(self->entries->account, &res);
@@ -3363,7 +3343,6 @@ static PyGetSetDef PyEntry_getseters[] = {
     {"account", (getter)PyEntry_account, NULL, NULL, NULL},
     {"amount", (getter)PyEntry_amount, NULL, NULL, NULL},
     {"balance", (getter)PyEntry_balance, NULL, NULL, NULL},
-    {"balance_with_budget", (getter)PyEntry_balance_with_budget, NULL, NULL, NULL},
     {"checkno", (getter)PyEntry_checkno, NULL, NULL, NULL},
     {"date", (getter)PyEntry_date, NULL, NULL, NULL},
     {"description", (getter)PyEntry_description, NULL, NULL, NULL},
@@ -3572,7 +3551,6 @@ static PyGetSetDef PyTransaction_getseters[] = {
     {"is_mct", (getter)PyTransaction_is_mct, NULL, NULL, NULL},
     {"is_null", (getter)PyTransaction_is_null, NULL, NULL, NULL},
     {"is_spawn", (getter)PyTransaction_is_spawn, NULL, NULL, NULL},
-    {"is_budget", (getter)PyTransaction_is_budget, NULL, NULL, NULL},
     // recurrence-related
     {"ref", (getter)PyTransaction_ref, (setter)PyTransaction_ref_set, NULL, NULL},
     {"recurrence_date", (getter)PyTransaction_recurrence_date, (setter)PyTransaction_recurrence_date_set, NULL, NULL},

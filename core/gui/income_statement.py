@@ -20,7 +20,6 @@ class IncomeStatement(Report):
         Column('last_cash_flow', display=trcol("Last"), optional=True),
         Column('delta', display=trcol("Change"), visible=False, optional=True),
         Column('delta_perc', display=trcol("Change %"), visible=False, optional=True),
-        Column('budgeted', display=trcol("Budgeted"), optional=True),
     ]
 
     # --- Override
@@ -33,19 +32,15 @@ class IncomeStatement(Report):
         cash_flow_native = entries.normal_cash_flow(date_range, currency)
         last_cash_flow = entries.normal_cash_flow(date_range.prev())
         last_cash_flow_native = entries.normal_cash_flow(date_range.prev(), currency)
-        remaining = self.document.budgets.normal_amount_for_account(account, date_range)
-        remaining_native = self.document.budgets.normal_amount_for_account(account, date_range, currency)
         delta = cash_flow - last_cash_flow
 
         # Amounts for totals are converted in the document's currency
         node.cash_flow_amount = cash_flow_native
         node.last_cash_flow_amount = last_cash_flow_native
-        node.budgeted_amount = remaining_native
 
         # Amounts for display are kept in the account's currency
         node.cash_flow = self.document.format_amount(cash_flow)
         node.last_cash_flow = self.document.format_amount(last_cash_flow)
-        node.budgeted = self.document.format_amount(remaining)
         node.delta = self.document.format_amount(delta)
         node.delta_perc = get_delta_perc(delta, last_cash_flow)
 
@@ -53,13 +48,10 @@ class IncomeStatement(Report):
         node = Report._make_node(self, name)
         node.cash_flow = ''
         node.last_cash_flow = ''
-        node.budget = ''
-        node.budgeted = ''
         node.delta = ''
         node.delta_perc = ''
         node.cash_flow_amount = 0
         node.last_cash_flow_amount = 0
-        node.budgeted_amount = 0
         return node
 
     def _refresh(self):
@@ -70,7 +62,6 @@ class IncomeStatement(Report):
         self.net_income = self._make_node(tr('NET INCOME'))
         net_income = self.income.cash_flow_amount - self.expenses.cash_flow_amount
         last_net_income = self.income.last_cash_flow_amount - self.expenses.last_cash_flow_amount
-        net_budgeted = self.income.budgeted_amount - self.expenses.budgeted_amount
         delta = net_income - last_net_income
         force_explicit_currency = self.has_multiple_currencies
         self.net_income.cash_flow = self.document.format_amount(
@@ -78,9 +69,6 @@ class IncomeStatement(Report):
         )
         self.net_income.last_cash_flow = self.document.format_amount(
             last_net_income, force_explicit_currency=force_explicit_currency
-        )
-        self.net_income.budgeted = self.document.format_amount(
-            net_budgeted, force_explicit_currency=force_explicit_currency
         )
         self.net_income.delta = self.document.format_amount(
             delta, force_explicit_currency=force_explicit_currency
@@ -96,7 +84,6 @@ class IncomeStatement(Report):
         node = Report.make_total_node(self, name)
         parent.cash_flow_amount = sum(child.cash_flow_amount for child in parent)
         parent.last_cash_flow_amount = sum(child.last_cash_flow_amount for child in parent)
-        parent.budgeted_amount = sum(child.budgeted_amount for child in parent)
         delta = parent.cash_flow_amount - parent.last_cash_flow_amount
         force_explicit_currency = self.has_multiple_currencies
         node.cash_flow = parent.cash_flow = self.document.format_amount(
@@ -104,9 +91,6 @@ class IncomeStatement(Report):
         )
         node.last_cash_flow = parent.last_cash_flow = self.document.format_amount(
             parent.last_cash_flow_amount, force_explicit_currency=force_explicit_currency
-        )
-        node.budgeted = parent.budgeted = self.document.format_amount(
-            parent.budgeted_amount, force_explicit_currency=force_explicit_currency
         )
         node.delta = parent.delta = self.document.format_amount(
             delta, force_explicit_currency=force_explicit_currency

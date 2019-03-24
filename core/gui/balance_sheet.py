@@ -4,12 +4,11 @@
 # which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-from datetime import timedelta, date
+from datetime import timedelta
 
 from core.trans import trget, tr
 from .column import Column
 from ..const import AccountType
-from ..model.date import DateRange
 from .report import Report, get_delta_perc
 
 trcol = trget('columns')
@@ -67,9 +66,6 @@ class BalanceSheet(Report):
         self.net_worth = self._make_node(tr('NET WORTH'))
         net_worth_start = self.assets.start_amount - self.liabilities.start_amount
         net_worth_end = self.assets.end_amount - self.liabilities.end_amount
-        budget_date_range = DateRange(date.today(), self.document.date_range.end)
-        # The net worth's budget is not a simple subtraction, it must count the target-less budgets
-        net_worth_budgeted = self.document.budgeted_amount(budget_date_range)
         net_worth_delta = net_worth_end - net_worth_start
         force_explicit_currency = self.has_multiple_currencies
         self.net_worth.start = self.document.format_amount(
@@ -77,11 +73,6 @@ class BalanceSheet(Report):
         )
         self.net_worth.end = self.document.format_amount(
             net_worth_end, force_explicit_currency=force_explicit_currency
-        )
-        # TODO: move this value to budget view. except for tests, this isn't
-        #       used any more.
-        self.net_worth.budgeted = self.document.format_amount(
-            net_worth_budgeted, force_explicit_currency=force_explicit_currency
         )
         self.net_worth.delta = self.document.format_amount(
             net_worth_delta, force_explicit_currency=force_explicit_currency

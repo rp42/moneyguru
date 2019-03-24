@@ -124,13 +124,6 @@ def test_mainwindow_move_pane():
     app.mw.move_pane(0, 1)
     app.mainwindow_gui.check_gui_calls(['refresh_panes'])
 
-def test_new_budget():
-    # Repeat options must be updated upon view revalidation
-    app = app_cleared_gui_calls()
-    app.add_account('income', account_type=AccountType.Income) # we need an account for the panel to load
-    bview = app.show_bview()
-    bview.repeat_type_list.view.check_gui_calls_partial(['refresh'])
-
 def test_new_schedule():
     # Repeat options and mct notices must be updated upon panel load
     app = app_cleared_gui_calls()
@@ -198,11 +191,6 @@ def test_stop_editing_on_applying_filter():
     app.clear_gui_calls()
     tview.filter_bar.filter_type = FilterType.Income
     tview.ttable.view.check_gui_calls_partial(['stop_editing'])
-
-def test_show_bview():
-    app = app_cleared_gui_calls()
-    bview = app.show_bview()
-    bview.view.check_gui_calls_partial(['refresh'])
 
 # --- On transaction view
 def app_on_transaction_view():

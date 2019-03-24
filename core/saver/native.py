@@ -10,7 +10,7 @@ import xml.etree.cElementTree as ET
 from ..model._ccore import amount_format
 from core.util import remove_invalid_xml, ensure_folder
 
-def save(filename, document_id, properties, accounts, transactions, schedules, budgets):
+def save(filename, document_id, properties, accounts, transactions, schedules):
     def date2str(date):
         return date.strftime('%Y-%m-%d')
 
@@ -90,15 +90,6 @@ def save(filename, document_id, properties, accounts, transactions, schedules, b
             if exception is not None:
                 write_transaction_element(exception_element, exception)
         write_transaction_element(recurrence_element, recurrence.ref)
-    for budget in budgets:
-        budget_element = ET.SubElement(root, 'budget')
-        attrib = budget_element.attrib
-        attrib['account'] = budget.account.name
-        attrib['type'] = budgets.repeat_type
-        attrib['every'] = str(budgets.repeat_every)
-        attrib['amount'] = amount_format(budget.amount)
-        attrib['notes'] = budget.notes
-        attrib['start_date'] = date2str(budgets.start_date)
     for elem in root.iter():
         attrib = elem.attrib
         for key, value in attrib.items():

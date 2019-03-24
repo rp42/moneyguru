@@ -129,8 +129,8 @@ def test_sort_by_amount(app):
     eq_(app.ttable[1].amount, 'CAD 43.00')
 
 # --- Mixed up reconciled schedule and budget
-# A mix of 4 txns. One reconciled, one normal, one schedule spawn and one budget spawn.
-def app_mixed_up_schedule_and_budget(monkeypatch):
+# A mix of 3 txns. One reconciled, one normal and one schedule spawn.
+def app_mixed_up_schedule(monkeypatch):
     monkeypatch.patch_today(2010, 1, 1)
     app = TestApp()
     app.drsel.select_month_range() # we just want 4 transactions
@@ -142,10 +142,9 @@ def app_mixed_up_schedule_and_budget(monkeypatch):
     app.etable.save_edits()
     app.add_txn('01/01/2010', description='plain', from_='asset')
     app.add_schedule(repeat_type_index=2, description='schedule', account='asset', amount='42') # monthly
-    app.add_budget('expense', '500', start_date='01/01/2010')
     return app
 
-@with_app(app_mixed_up_schedule_and_budget)
+@with_app(app_mixed_up_schedule)
 def test_sort_etable_by_status(app):
     # Reconciled are first, then plain, then schedules
     app.show_aview() # 'asset' is already selected from setup
@@ -154,15 +153,14 @@ def test_sort_etable_by_status(app):
     eq_(app.etable[1].description, 'plain')
     eq_(app.etable[2].description, 'schedule')
 
-@with_app(app_mixed_up_schedule_and_budget)
+@with_app(app_mixed_up_schedule)
 def test_sort_ttable_by_status(app):
-    # Reconciled are first, then plain, then schedules, then budgets
+    # Reconciled are first, then plain, then schedules
     app.show_tview()
     app.ttable.sort_by('status')
     eq_(app.ttable[0].description, 'reconciled')
     eq_(app.ttable[1].description, 'plain')
     eq_(app.ttable[2].description, 'schedule')
-    assert app.ttable[3].is_budget
 
 # --- Two transactions added when sorted by description
 def app_two_txns_added_when_sorted_by_description():

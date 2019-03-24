@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-# Created By: Virgil Dupras
-# Created On: 2009-11-23
-# Copyright 2015 Hardcoded Software (http://www.hardcoded.net)
+# Copyright 2019 Virgil Dupras
 #
 # This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
 # which should be included with this package. The terms are also available at
@@ -29,8 +26,6 @@ class TableWithTransactions(Table):
                 iconName = 'backward_16'
             elif row.reconciled:
                 iconName = 'check_16'
-            elif row.is_budget:
-                iconName = 'budget_16'
             elif row.recurrent:
                 iconName = 'recurrent_16'
             if iconName:

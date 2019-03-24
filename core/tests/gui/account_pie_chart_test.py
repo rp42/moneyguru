@@ -87,17 +87,6 @@ class TestSomeAssetsAndLiabilities:
         eq_(app.nwview.pie.pie1, expected)
 
     @with_app(do_setup)
-    def test_budget_multiple_currency(self, app):
-        # just make sure it doesn't crash
-        app.bsheet.selected = app.bsheet.assets[0]
-        apanel = app.mw.edit_item()
-        apanel.currency_list.select(Currencies.index('CAD'))
-        apanel.save()
-        app.add_account('income', account_type=AccountType.Income)
-        app.add_budget('income', '5')
-        app.show_nwview() # don't crash
-
-    @with_app(do_setup)
     def test_exclude_account(self, app):
         # excluding an account removes it from the pie chart
         app.bsheet.selected = app.bsheet.assets[0]
@@ -168,20 +157,6 @@ class TestSomeIncomeAndExpenses:
         app.istatement.selected = app.istatement.expenses
         app.clear_gui_calls()
         return app
-
-    @with_app(do_setup)
-    def test_budget(self, app, monkeypatch):
-        # budgeted amounts are also reflected in the pie chart
-        monkeypatch.patch_today(2009, 1, 29) # On the last day of the month, this test fails
-        app.add_budget('e1', '5')
-        app.show_pview()
-        expected = [
-            ('e1 41.7%', 5, 0),
-            ('e3 33.3%', 4, 1),
-            ('e4 16.7%', 2, 2),
-            ('e2 8.3%', 1, 3),
-        ]
-        eq_(app.pview.pie.pie2, expected)
 
     @with_app(do_setup)
     def test_expenses_pie_chart_values(self, app):

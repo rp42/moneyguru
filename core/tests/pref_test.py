@@ -16,16 +16,16 @@ from .base import TestApp, with_app, testdata
 @with_app(TestApp)
 def test_mainwindow_panes_reopen(app):
     # Main Window panes re-open themselves upon launch, in the same order
-    app.mw.close_pane(4) # close budget pane
+    app.mw.close_pane(3) # close schedule pane
     app.add_account('foo')
     app.show_account() # we now have the 'foo' account opened.
-    app.mw.move_pane(4, 1) # move the 'foo' pane at the second position
+    app.mw.move_pane(3, 1) # move the 'foo' pane at the second position
     # The selected pane index is 1
     newapp = app.save_and_load()
     eq_(newapp.mw.current_pane_index, 1) # We've restored the selected pane index
     newapp.check_current_pane(PaneType.Account, account_name='foo')
-    newapp.mw.current_pane_index = 4
-    newapp.check_current_pane(PaneType.Schedule)
+    newapp.mw.current_pane_index = 2
+    newapp.check_current_pane(PaneType.Profit)
 
 @with_app(TestApp)
 def test_mainwindow_panes_reopen_except_nonexistant_accounts(app):
@@ -44,9 +44,9 @@ def test_mainwindow_panes_reopen_except_nonexistant_accounts(app):
     newapp = TestApp(app=app.app)
     # We have to load a file for the columns to be restored. That file doesn't have a 'foo' account
     newapp.mw.load_from_xml(filename) # no crash on restore
-    eq_(newapp.mw.pane_count, 5)
+    eq_(newapp.mw.pane_count, 4)
     # since we don't have enough tabs to restore last selected index, select the last one
-    eq_(newapp.mw.current_pane_index, 4)
+    eq_(newapp.mw.current_pane_index, 3)
 
 @with_app(TestApp)
 def test_main_window_doent_choke_on_unexisting_pane_pref(app):
@@ -171,10 +171,6 @@ def test_sctable_restores_columns(app):
     assert_column_save_restore(app, 'sctable', 'payee', 'show_scview')
 
 @with_app(TestApp)
-def test_btable_restores_columns(app):
-    assert_column_save_restore(app, 'btable', 'account', 'show_bview')
-
-@with_app(TestApp)
 def test_bsheet_restores_columns(app):
     assert_column_save_restore(app, 'bsheet', 'end', 'show_nwview')
 
@@ -272,14 +268,14 @@ def test_account_exclusion_prefs_is_at_document_level():
 def test_pane_prefs_is_at_document_level():
     # pane preferences are at the document level
     app1 = TestApp()
-    app1.mw.close_pane(4) # close budget pane
+    app1.mw.close_pane(3) # close schedule pane
     filename = app1.save_file()
     app1.mw.close()
     app2 = TestApp(app=app1.app)
-    app1.mw.close_pane(3) # close schedule pane
+    app1.mw.close_pane(2) # close txn pane
     app2.mw.close()
     newapp = TestApp(app=app1.app)
     newapp.mw.load_from_xml(filename)
-    eq_(newapp.mw.pane_count, 4)
-    newapp.mw.current_pane_index = 3
-    newapp.check_current_pane(PaneType.Schedule)
+    eq_(newapp.mw.pane_count, 3)
+    newapp.mw.current_pane_index = 2
+    newapp.check_current_pane(PaneType.Transaction)

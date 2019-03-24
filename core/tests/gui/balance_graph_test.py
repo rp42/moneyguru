@@ -51,26 +51,6 @@ class TestForeignAccount:
 
 
 # ---
-def app_budget_and_no_txn(monkeypatch):
-    monkeypatch.patch_today(2008, 1, 1)
-    app = TestApp()
-    app.drsel.select_month_range()
-    app.add_account('asset')
-    app.add_account('income', account_type=AccountType.Income)
-    app.add_budget('income', '100')
-    return app
-
-@with_app(app_budget_and_no_txn)
-def test_future_date_range(app):
-    # There was a bug where when in a future date range, and also in a range with no transaction,
-    # no budget data would be drawn.
-    app.drsel.select_next_date_range()
-    app.show_nwview()
-    # Now, we're supposed to see a graph starting at 100 and ending at 200
-    expected = [('01/02/2008', '100.00'), ('01/03/2008', '200.00')]
-    eq_(app.nw_graph_data(), expected)
-
-# ---
 class TestTwoAccountsOneTransaction:
     def do_setup(self):
         app = TestApp()

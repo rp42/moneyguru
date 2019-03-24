@@ -597,25 +597,6 @@ def test_delete_both_entries(app):
     app.etable.delete() # no crash
     eq_(app.etable_count(), 0)
 
-# --- With budget
-def app_with_budget(monkeypatch):
-    app = TestApp()
-    monkeypatch.patch_today(2008, 1, 27)
-    app.drsel.select_today_date_range()
-    app.add_account('foo', account_type=AccountType.Expense)
-    app.add_account('bar', account_type=AccountType.Liability)
-    app.add_budget('foo', '100')
-    return app
-
-@with_app(app_with_budget)
-def test_budget_spawns(app):
-    # When a budget is set budget transaction spawns show up in wtable, at the end of each month.
-    app.show_account('foo')
-    eq_(app.etable_count(), 12)
-    assert app.etable[0].is_budget
-    # Budget spawns can't be edited
-    assert not app.etable.can_edit_cell('date', 0)
-
 # --- Unreconciled entry in the middle of two reconciled entries
 def app_unreconciled_between_two_reconciled():
     app = TestApp()

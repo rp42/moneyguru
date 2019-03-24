@@ -8,7 +8,6 @@ entry_init(Entry *entry, Split *split, Transaction *txn)
     entry->txn = txn;
     amount_copy(&entry->balance, amount_zero());
     amount_copy(&entry->reconciled_balance, amount_zero());
-    amount_copy(&entry->balance_with_budget, amount_zero());
 }
 
 bool
@@ -67,7 +66,6 @@ entry_copy(Entry *dst, const Entry *src)
     dst->txn = src->txn;
     amount_copy(&dst->balance, &src->balance);
     amount_copy(&dst->reconciled_balance, &src->reconciled_balance);
-    amount_copy(&dst->balance_with_budget, &src->balance_with_budget);
 }
 
 /* EntryList Private */
@@ -163,7 +161,7 @@ entries_balance_of_reconciled(const EntryList *entries, Amount *dst)
 }
 
 bool
-entries_balance(const EntryList *entries, Amount *dst, time_t date, bool with_budget)
+entries_balance(const EntryList *entries, Amount *dst, time_t date)
 {
     if (entries->cooked_until == 0) {
         dst->val = 0;
@@ -183,7 +181,7 @@ entries_balance(const EntryList *entries, Amount *dst, time_t date, bool with_bu
     }
     if (index >= 0) {
         Entry *entry = entries->entries[index];
-        Amount *src = with_budget ? &entry->balance_with_budget : &entry->balance;
+        Amount *src = &entry->balance;
         if (date > 0) {
             if (amount_convert(dst, src, date)) {
                 return true;
@@ -211,9 +209,6 @@ entries_cash_flow(
     for (int i=0; i<entries->count; i++) {
         Entry *entry = entries->entries[i];
         Transaction *txn = entry->txn;
-        if (txn->type == TXN_TYPE_BUDGET) {
-            continue;
-        }
         if (txn->date >= from && txn->date <= to) {
             Amount a;
             a.currency = dst->currency;
@@ -268,18 +263,13 @@ entries_cook(EntryList *entries)
     }
     Amount amount;
     Amount balance;
-    Amount balance_with_budget;
     Amount reconciled_balance;
 
-    if (!entries_balance(entries, &balance, 0, false)) {
-        return false;
-    }
-    if (!entries_balance(entries, &balance_with_budget, 0, true)) {
+    if (!entries_balance(entries, &balance, 0)) {
         return false;
     }
     entries_balance_of_reconciled(entries, &reconciled_balance);
     balance.currency = entries->account->currency;
-    balance_with_budget.currency = balance.currency;
     reconciled_balance.currency = balance.currency;
     amount.currency = balance.currency;
 
@@ -292,12 +282,8 @@ entries_cook(EntryList *entries)
         if (!amount_convert(&amount, &split->amount, entry->txn->date)) {
             return false;
         }
-        if (entry->txn->type != TXN_TYPE_BUDGET) {
-            balance.val += amount.val;
-        }
+        balance.val += amount.val;
         amount_copy(&entry->balance, &balance);
-        balance_with_budget.val += amount.val;
-        amount_copy(&entry->balance_with_budget, &balance_with_budget);
 
         rel[i] = entry;
     }

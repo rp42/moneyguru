@@ -267,16 +267,6 @@ class TestLoadWithReferences1:
 
 
 # --- All app functions below are tested in the following test generators
-def app_account_with_budget():
-    app = TestApp()
-    app.add_account('asset')
-    app.add_account('income', account_type=AccountType.Income)
-    app.add_budget('income', '400')
-    bpanel = app.mainwindow.edit_item()
-    bpanel.notes = 'foobar'
-    bpanel.save()
-    return app
-
 def app_transaction_with_payee_and_checkno():
     app = TestApp()
     app.add_account('Checking')
@@ -353,14 +343,6 @@ def app_one_account_in_one_group():
     app.add_account(group_name='group')
     return app
 
-def app_budget_with_all_fields_set():
-    app = TestApp()
-    app.add_account('income', account_type=AccountType.Income)
-    app.add_budget(
-        'income', '100', start_date='01/01/2009', repeat_type_index=3,
-        repeat_every=2)
-    return app
-
 def app_account_with_apanel_attrs():
     app = TestApp()
     app.add_account()
@@ -430,9 +412,6 @@ def test_save_load(tmpdir, monkeypatch):
         newapp.doc._cook()
         compare_apps(app.doc, newapp.doc)
 
-    app = app_account_with_budget()
-    check(app)
-
     app = app_transaction_with_payee_and_checkno()
     check(app)
 
@@ -453,10 +432,6 @@ def test_save_load(tmpdir, monkeypatch):
 
     # make sure that groups are saved
     app = app_one_account_in_one_group()
-    check(app)
-
-    # make sure that all budget fields are correctly saved
-    app = app_budget_with_all_fields_set()
     check(app)
 
     # apanel attributes are saved/loaded

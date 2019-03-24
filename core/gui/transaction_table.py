@@ -128,7 +128,7 @@ class TransactionTableRow(Row, RowWithDateMixIn):
 
     # --- Public
     def can_edit(self):
-        return not self.is_budget
+        return True
 
     def load(self):
         transaction = self.transaction
@@ -154,7 +154,6 @@ class TransactionTableRow(Row, RowWithDateMixIn):
             self._mtime_fmt = ''
         self._recurrent = transaction.is_spawn
         self._reconciled = any(split.reconciled for split in splits)
-        self._is_budget = transaction.is_budget
         self._can_set_amount = transaction.can_set_amount
 
     def save(self):
@@ -174,13 +173,11 @@ class TransactionTableRow(Row, RowWithDateMixIn):
         if column_name == 'date':
             return (self._date, self._position)
         elif column_name == 'status':
-            # First reconciled, then plain ones, then schedules, then budgets
+            # First reconciled, then plain ones, then schedules
             if self.reconciled:
                 return 0
             elif self.recurrent:
                 return 2
-            elif self.is_budget:
-                return 3
             else:
                 return 1
         else:
@@ -235,10 +232,6 @@ class TransactionTableRow(Row, RowWithDateMixIn):
     def recurrent(self):
         return self._recurrent
 
-    @property
-    def is_budget(self):
-        return self._is_budget
-
 
 class TotalRow(Row):
     def __init__(self, table, date, total_amount):
@@ -254,7 +247,6 @@ class TotalRow(Row):
         self.mtime = ''
         self.reconciled = False
         self.recurrent = False
-        self.is_budget = False
         self.is_bold = True
 
     def can_edit(self):

@@ -13,33 +13,13 @@ import pytest
 from ..testutil import eq_
 
 from ..base import TestApp, with_app, testdata
-from ...const import PaneType, AccountType
+from ...const import PaneType
 from ...gui.transaction_table import TransactionTable
 from ...model.date import MonthRange, YearRange
 from ...model.currency import Currencies
 
 
 #---
-@with_app(TestApp)
-def test_budget_spawns(app, monkeypatch):
-    # When a budget is set budget transaction spawns show up in ttable, at
-    # the end of each month.
-    monkeypatch.patch_today(2008, 1, 27)
-    app.drsel.select_today_date_range()
-    app.add_account('Some Expense', account_type=AccountType.Expense)
-    app.add_budget('Some Expense', '100')
-    app.show_tview()
-    app.clear_gui_calls()
-    eq_(app.ttable.row_count, 12)
-    eq_(app.ttable[0].amount, '100.00')
-    eq_(app.ttable[0].date, '31/01/2008')
-    eq_(app.ttable[0].to, 'Some Expense')
-    assert app.ttable[0].is_budget
-    eq_(app.ttable[11].date, '31/12/2008')
-    # Budget spawns can't be edited
-    assert not app.ttable.can_edit_cell('date', 0)
-    assert app.mw.edit_item() is None # budget spawns can't be edited
-
 @with_app(TestApp)
 def test_save_load_unassigned_txn(app):
     # Make sure that unassigned transactions are loaded

@@ -76,8 +76,7 @@ class CashFlowPieChart(_AccountPieChart):
         def get_value(account):
             entries = self.document.accounts.entries_for_account(account)
             cash_flow = entries.normal_cash_flow(date_range, currency)
-            budgeted = self.document.budgets.normal_amount_for_account(account, date_range, currency=currency)
-            return cash_flow + budgeted
+            return cash_flow
 
         return [(a, get_value(a)) for a in accounts]
 

@@ -129,7 +129,7 @@ class Loader:
         self.default_date_format = default_date_format
         self.accounts = AccountList(default_currency)
         self.transactions = TransactionList()
-        self.oven = Oven(self.accounts, self.transactions, None, None)
+        self.oven = Oven(self.accounts, self.transactions, None)
         # The Loader subclass should set parsing_date_format to the format used (system-type) when
         # parsing dates. This format is used in the ImportWindow. It is also used in
         # self.parse_date_str as a default value

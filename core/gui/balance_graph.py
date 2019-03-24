@@ -1,6 +1,4 @@
-# Created By: Virgil Dupras
-# Created On: 2008-07-06
-# Copyright 2015 Hardcoded Software (http://www.hardcoded.net)
+# Copyright 2019 Virgil Dupras
 #
 # This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
 # which should be included with this package. The terms are also available at
@@ -27,15 +25,7 @@ class BalanceGraph(Graph):
     def _balance_for_date(self, date):
         return 0
 
-    def _budget_for_date(self, date):
-        return 0
-
     # --- Override
-    # Computation Notes: When the balance in the graph changes, we have to create a flat line until
-    # one day prior to the change. However, when budgets are involved, the line is *not* flattened.
-    # To save some calculations (in a year range, those take a lot of time if they're made every day),
-    # rather than calculating the budget every day, they are only calculated when the balance without
-    # budget changes. this is what the algorithm below reflects.
     def compute_data(self):
         date_range = self.document.date_range
         TODAY = date.today()
@@ -54,12 +44,6 @@ class BalanceGraph(Graph):
         for date_point, value in list(date2value.items()):
             if date_point <= TODAY:
                 continue
-            budget = self._budget_for_date(date_point - ONE_DAY)
-            if budget:
-                date2value[date_point] += budget
-        if date_range.start not in date2value and date_range.start > TODAY:
-            budget = self._budget_for_date(date_range.start - ONE_DAY)
-            date2value[date_range.start] = budget
         self._data = []
         # if there's only zeroes, keep the data empty
         if any(date2value.values()):

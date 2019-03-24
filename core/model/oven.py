@@ -5,44 +5,31 @@
 # http://www.gnu.org/licenses/gpl-3.0.html
 
 from datetime import date
-from itertools import dropwhile
 from operator import attrgetter
 
 from core.util import flatten
 
 from ._ccore import oven_cook_txns
-from .budget import BudgetList
 
 class Oven:
-    """Computes raw data from transactions, schedules, budgets.
+    """Computes raw data from transactions, schedules.
 
     Two main things the oven :ref:`cooks <cooking>`:
 
-    1. Spawns schedule and budget transactions and insert them into its cooked result,
+    1. Spawns schedule transactions and insert them into its cooked result,
        :attr:`transactions`. This :class:`.TransactionList` is what is then used by the rest of the
        app to display transactions and account entries.
     2. Creates :class:`.Entry` instances to place in :attr:`.Account.entries`. These entries contain
        running totals for each account (which is, of course, calculated).
     """
-    def __init__(self, accounts, transactions, scheduled, budgets):
+    def __init__(self, accounts, transactions, scheduled):
         self._accounts = accounts
         self._transactions = transactions
         self._scheduled = scheduled
-        self._budgets = budgets
         self._cooked_until = date.min
         #: List of cooked transactions, containing :class:`.Transaction` instances mixed with
-        #: schedule and budget :class:`.Spawn` instances (in date/position order).
+        #: schedule :class:`.Spawn` instances (in date/position order).
         self.transactions = []
-
-    def _budget_spawns(self, until_date, schedule_spawns):
-        if not self._budgets:
-            return []
-        # TODO: fix this
-        if not isinstance(self._budgets, BudgetList):
-            self._budgets = BudgetList(self._budgets)
-        ref_date = self._budgets.start_date
-        relevant_txns = list(dropwhile(lambda t: t.date < ref_date, self._transactions)) + schedule_spawns
-        return self._budgets.get_spawns(until_date, relevant_txns)
 
     def continue_cooking(self, until_date):
         """Cooks from where we stop last time until ``until_date``.
@@ -91,7 +78,6 @@ class Oven:
         # Cook
         if self._scheduled is not None:
             spawns = flatten(recurrence.get_spawns(until_date) for recurrence in self._scheduled)
-            spawns += self._budget_spawns(until_date, spawns)
             # To ensure that our sort order stay correct and consistent, we assign position values
             # to our spawns. To ensure that there's no overlap, we start our position counter at
             # len(transactions)

@@ -22,7 +22,6 @@ from .loader import native
 from .model._ccore import (
     AccountList, Entry, TransactionList, amount_parse, amount_format)
 from .model.currency import Currencies
-from .model.budget import BudgetList
 from .model.date import YearRange
 from .model.oven import Oven
 from .model.undo import Undoer, Action
@@ -83,14 +82,13 @@ class Document(GUIObject):
         # an ordered collection because the order in which the spawns are created must stay the
         # same
         self.schedules = []
-        self.budgets = BudgetList()
-        self.oven = Oven(self.accounts, self.transactions, self.schedules, self.budgets)
+        self.oven = Oven(self.accounts, self.transactions, self.schedules)
         self.step = 1
         #: Set of accounts that are currently in "excluded" state.
         self.excluded_accounts = set()
         # Keep track of newly added groups between refreshes
         self.newgroups = set()
-        self._undoer = Undoer(self.accounts, self.transactions, self.schedules, self.budgets)
+        self._undoer = Undoer(self.accounts, self.transactions, self.schedules)
         self._date_range = YearRange(datetime.date.today())
         self._document_id = None
         self._dirty_flag = False
@@ -266,26 +264,11 @@ class Document(GUIObject):
         affected_schedules = [s for s in self.schedules if accounts & s.affected_accounts()]
         for schedule in affected_schedules:
             action.change_schedule(schedule)
-        for account in accounts:
-            affected_budgets = [b for b in self.budgets if b.account == account or b.target == account]
-            if account.is_income_statement_account() and reassign_to is None:
-                action.deleted_budgets |= set(affected_budgets)
-            else:
-                for budget in affected_budgets:
-                    action.change_budget(budget)
         self._undoer.record(action)
         for account in accounts:
             self.transactions.reassign_account(account, reassign_to)
             for schedule in affected_schedules:
                 schedule.reassign_account(account, reassign_to)
-            for budget in affected_budgets:
-                if budget.account == account:
-                    if reassign_to is None:
-                        self.budgets.remove(budget)
-                    else:
-                        budget.account = reassign_to
-                elif budget.target == account:
-                    budget.target = reassign_to
             self.accounts.remove(account)
         self._cook()
 
@@ -584,67 +567,6 @@ class Document(GUIObject):
                 entry.split.reconciliation_date = None
         self._cook(from_date=min_date)
 
-    # --- Budget
-    def budgeted_amount(self, date_range, filter_excluded=True):
-        """Returns the amount budgeted for **all** budgets
-
-        The amount is pro-rated according to ``date_range``.
-
-        If ``filter_excluded`` is true, we ignore accounts in "excluded" state.
-
-        :param date_range: ``datetime.date``
-        :param filter_excluded: ``bool``
-        :rtype: :class:`.Amount`
-        """
-        budgets = self.budgets[:]
-        currency = self.default_currency
-        if filter_excluded:
-            # we must remove any budget touching an excluded account.
-            is_not_excluded = lambda b: (b.account not in self.excluded_accounts)
-            budgets = list(filter(is_not_excluded, budgets))
-        if not budgets:
-            return 0
-        budgeted_amount = sum(-b.amount_for_date_range(date_range, currency=currency) for b in budgets)
-        return budgeted_amount
-
-    def change_budget(self, original, new):
-        """Changes the attributes of ``original`` so that they match those of ``new``.
-
-        This is used by the :class:`.BudgetPanel`, and ``new`` is originally a copy of ``original``
-        which has been changed.
-
-        :param original: :class:`.Budget`
-        :param new: :class:`.Budget`
-        """
-        if original in self.budgets:
-            action = Action(tr('Change Budget'))
-            action.change_budget(original)
-        else:
-            action = Action(tr('Add Budget'))
-            action.added_budgets.add(original)
-        self._undoer.record(action)
-        min_date = min(self.budgets.start_date, datetime.date.today())
-        original.account = new.account
-        original.amount = new.amount
-        original.notes = new.notes
-        if original not in self.budgets:
-            self.budgets.append(original)
-        self._cook(from_date=min_date)
-
-    def delete_budgets(self, budgets):
-        """Removes ``budgets`` from the document.
-
-        :param budgets: list of :class:`.Budget`
-        """
-        if not budgets:
-            return
-        action = Action(tr('Remove Budget'))
-        action.deleted_budgets |= set(budgets)
-        self._undoer.record(action)
-        for budget in budgets:
-            self.budgets.remove(budget)
-        self._cook(from_date=self.budgets.start_date)
-
     # --- Schedule
     def change_schedule(self, schedule, new_ref, repeat_type, repeat_every, stop_date):
         """Change attributes of ``schedule``.
@@ -723,11 +645,6 @@ class Document(GUIObject):
             self.transactions.add(transaction, True)
         for recurrence in loader.schedules:
             self.schedules.append(recurrence)
-        self.budgets.start_date = loader.budgets.start_date
-        self.budgets.repeat_type = loader.budgets.repeat_type
-        self.budgets.repeat_every = loader.budgets.repeat_every
-        for budget in loader.budgets:
-            self.budgets.append(budget)
         self.accounts.default_currency = self.default_currency
         self._cook()
         self._undoer.set_save_point()
@@ -748,7 +665,7 @@ class Document(GUIObject):
             self._document_id = uuid.uuid4().hex
         save_native(
             filename, self._document_id, self._properties, self.accounts,
-            self.transactions, self.schedules, self.budgets
+            self.transactions, self.schedules
         )
         if not autosave:
             self._undoer.set_save_point()
@@ -893,7 +810,6 @@ class Document(GUIObject):
     def clear(self):
         self._document_id = None
         del self.schedules[:]
-        del self.budgets[:]
         self._undoer.clear()
         self._dirty_flag = False
         self.excluded_accounts = set()

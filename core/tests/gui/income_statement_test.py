@@ -73,35 +73,6 @@ def test_add_entry(app):
     eq_(app.istatement.income[0].cash_flow, '292.00')
 
 @with_app(app_accounts_and_entries)
-def test_attrs_with_budget(app, monkeypatch):
-    # Must include the budget. 250 of the 400 are spent, there's 150 left to add
-    monkeypatch.patch_today(2008, 1, 17)
-    app.add_budget('Account 1', '400')
-    app.show_pview()
-    eq_(app.istatement.income[0].cash_flow, '250.00')
-    eq_(app.istatement.income[0].budgeted, '150.00')
-    eq_(app.istatement.income.budgeted, '150.00')
-    eq_(app.istatement.net_income.budgeted, '150.00')
-    app.drsel.select_next_date_range()
-    eq_(app.istatement.income[0].cash_flow, '0.00')
-    eq_(app.istatement.income[0].budgeted, '400.00')
-    app.drsel.select_quarter_range()
-    eq_(app.istatement.income[0].cash_flow, '250.00')
-    eq_(app.istatement.income[0].budgeted, '950.00')
-    app.drsel.select_year_range()
-    eq_(app.istatement.income[0].cash_flow, '250.00')
-    eq_(app.istatement.income[0].budgeted, '4550.00')
-    app.drsel.select_year_to_date_range()
-    eq_(app.istatement.income[0].cash_flow, '250.00')
-
-@with_app(app_accounts_and_entries)
-def test_cash_flow_with_underestimated_budget(app, monkeypatch):
-    monkeypatch.patch_today(2008, 1, 17)
-    app.add_budget('Account 1', '200')
-    app.show_pview()
-    eq_(app.istatement.income[0].cash_flow, '250.00')
-
-@with_app(app_accounts_and_entries)
 def test_exclude_account(app):
     # Excluding an account removes its amount from the totals and blanks its own amounts
     app.istatement.selected = app.istatement.income[1]
@@ -158,16 +129,6 @@ def app_multiple_currencies():
     app.add_entry('31/1/2008', 'USD entry', increase='20.00')
     app.show_pview()
     return app
-
-@with_app(app_multiple_currencies)
-def test_with_budget(app, monkeypatch):
-    # What this test is making sure of is that the account's budget is of the same currency than
-    # the account itself
-    monkeypatch.patch_today(2008, 1, 20)
-    app.add_budget('USD account', '300usd')
-    app.show_pview()
-    eq_(app.istatement.income[0][1].cash_flow, 'USD 100.00')
-    eq_(app.istatement.income[0][1].budgeted, 'USD 200.00')
 
 @with_app(app_multiple_currencies)
 def test_income_statement_multiple_currencies(app):
@@ -247,21 +208,3 @@ def test_select_running_year_range(app, monkeypatch):
     eq_(app.istatement.income[0].cash_flow, '21.00')
     # 'Last' is 01/03/2007-28/02/2008, which means 2 + 3 + 4 + 5 (14)
     eq_(app.istatement.income[0].last_cash_flow, '14.00')
-
-# ---
-def app_busted_budget(monkeypatch):
-    monkeypatch.patch_today(2010, 1, 3)
-    app = TestApp()
-    app.drsel.select_month_range()
-    app.add_account('account', account_type=AccountType.Income)
-    app.show_account()
-    app.add_entry('01/01/2010', increase='112')
-    app.add_budget('account', '100')
-    app.show_pview()
-    return app
-
-@with_app(app_busted_budget)
-def test_budget_column_display(app):
-    # The budget column displays 0
-    eq_(app.istatement.income[0].budgeted, '0.00')
-

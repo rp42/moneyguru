@@ -21,8 +21,7 @@ class AccountFlowGraph(BarGraph):
         entries = self.document.accounts.entries_for_account(account)
         currency = self._currency()
         cash_flow = entries.normal_cash_flow(date_range, currency)
-        budgeted = self.document.budgets.normal_amount_for_account(account, date_range, currency)
-        return cash_flow + budgeted
+        return cash_flow
 
     # --- Properties
     @property

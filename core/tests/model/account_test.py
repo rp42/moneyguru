@@ -46,7 +46,7 @@ class TestOneAccount:
         transactions = TransactionList()
         for txn in txns:
             transactions.add(txn)
-        self.oven = Oven(self.accounts, transactions, [], [])
+        self.oven = Oven(self.accounts, transactions, [])
         self.oven.cook(date.min, date.max)
 
     def test_balance(self):

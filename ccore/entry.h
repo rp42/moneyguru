@@ -14,8 +14,6 @@ typedef struct {
     Amount balance;
     // The running total of all preceding *reconciled* entries in the account.
     Amount reconciled_balance;
-    // Running balance which includes all Budget spawns.
-    Amount balance_with_budget;
 } Entry;
 
 typedef struct {
@@ -50,7 +48,7 @@ void
 entries_deinit(EntryList *entries);
 
 bool
-entries_balance(const EntryList *entries, Amount *dst, time_t date, bool with_budget);
+entries_balance(const EntryList *entries, Amount *dst, time_t date);
 
 bool
 entries_balance_of_reconciled(const EntryList *entries, Amount *dst);

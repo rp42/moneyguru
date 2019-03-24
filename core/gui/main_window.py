@@ -31,7 +31,6 @@ from .profit_view import ProfitView
 from .transaction_view import TransactionView
 from .account_view import AccountView
 from .schedule_view import ScheduleView
-from .budget_view import BudgetView
 from .general_ledger_view import GeneralLedgerView
 from .docprops_view import DocPropsView
 from .empty_view import EmptyView
@@ -41,7 +40,6 @@ PANETYPE2LABEL = {
     PaneType.Profit: tr("Profit & Loss"),
     PaneType.Transaction: tr("Transactions"),
     PaneType.Schedule: tr("Schedules"),
-    PaneType.Budget: tr("Budgets"),
     PaneType.GeneralLedger: tr("General Ledger"),
     PaneType.DocProps: tr("Document Properties"),
     PaneType.Empty: tr("New Tab"),
@@ -173,8 +171,6 @@ class MainWindow(DocumentGUIObject):
             result = TransactionView(self)
         elif pane_type == PaneType.Schedule:
             result = ScheduleView(self)
-        elif pane_type == PaneType.Budget:
-            result = BudgetView(self)
         elif pane_type == PaneType.GeneralLedger:
             result = GeneralLedgerView(self)
         elif pane_type == PaneType.DocProps:
@@ -201,7 +197,7 @@ class MainWindow(DocumentGUIObject):
     def _restore_default_panes(self):
         pane_types = [
             PaneType.NetWorth, PaneType.Profit, PaneType.Transaction,
-            PaneType.Schedule, PaneType.Budget
+            PaneType.Schedule
         ]
         pane_data = list(zip(pane_types, [None] * len(pane_types)))
         self._set_panes(pane_data)

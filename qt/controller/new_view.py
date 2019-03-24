@@ -27,15 +27,13 @@ class NewView(BaseView):
         self.transactionButton.clicked.connect(self.transactionButtonClicked)
         self.gledgerButton.clicked.connect(self.gledgerButtonClicked)
         self.scheduleButton.clicked.connect(self.scheduleButtonClicked)
-        self.budgetButton.clicked.connect(self.budgetButtonClicked)
         self.docpropsButton.clicked.connect(self.docpropsButtonClicked)
         self.shortcut1.activated.connect(self.networthButtonClicked)
         self.shortcut2.activated.connect(self.profitButtonClicked)
         self.shortcut3.activated.connect(self.transactionButtonClicked)
         self.shortcut4.activated.connect(self.gledgerButtonClicked)
         self.shortcut5.activated.connect(self.scheduleButtonClicked)
-        self.shortcut6.activated.connect(self.budgetButtonClicked)
-        self.shortcut7.activated.connect(self.docpropsButtonClicked)
+        self.shortcut6.activated.connect(self.docpropsButtonClicked)
 
     def _setupUi(self):
         self.resize(400, 300)
@@ -51,8 +49,7 @@ class NewView(BaseView):
             ('transactionButton', tr("3. Transactions"), 'transaction_table_16'),
             ('gledgerButton', tr("4. General Ledger"), 'gledger_16'),
             ('scheduleButton', tr("5. Schedules"), 'schedules_16'),
-            ('budgetButton', tr("6. Budgets"), 'budget_16'),
-            ('docpropsButton', tr("7. Document Properties"), 'gledger_16'),
+            ('docpropsButton', tr("6. Document Properties"), 'gledger_16'),
         ]
         for i, (name, label, icon) in enumerate(BUTTONS, start=1):
             button = QPushButton(label)
@@ -83,9 +80,6 @@ class NewView(BaseView):
 
     def scheduleButtonClicked(self):
         self.model.select_pane_type(PaneType.Schedule)
-
-    def budgetButtonClicked(self):
-        self.model.select_pane_type(PaneType.Budget)
 
     def docpropsButtonClicked(self):
         self.model.select_pane_type(PaneType.DocProps)

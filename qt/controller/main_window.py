@@ -30,7 +30,6 @@ from ..support.tab_bar import TabBarPlus
 from ..print_ import ViewPrinter
 from ..util import horizontalSpacer, setAccelKeys, escapeamp
 from .account.view import EntryView
-from .budget.view import BudgetView
 from .networth.view import NetWorthView
 from .profit.view import ProfitView
 from .transaction.view import TransactionView
@@ -54,7 +53,6 @@ PANETYPE2ICON = {
     PaneType.Transaction: 'transaction_table_16',
     PaneType.Account: 'entry_table_16',
     PaneType.Schedule: 'schedules_16',
-    PaneType.Budget: 'budget_16',
     PaneType.GeneralLedger: 'gledger_16',
     PaneType.DocProps: 'gledger_16',
 }
@@ -65,7 +63,6 @@ PANETYPE2VIEWCLASS = {
     PaneType.Transaction: TransactionView,
     PaneType.Account: EntryView,
     PaneType.Schedule: ScheduleView,
-    PaneType.Budget: BudgetView,
     PaneType.GeneralLedger: GeneralLedgerView,
     PaneType.DocProps: DocPropsView,
     PaneType.Empty: NewView,
@@ -228,9 +225,6 @@ class MainWindow(QMainWindow):
         self.actionShowSchedules = QAction(tr("Schedules"), self)
         self.actionShowSchedules.setShortcut("Ctrl+4")
         self.actionShowSchedules.setIcon(QIcon(QPixmap(':/schedules_48')))
-        self.actionShowBudgets = QAction(tr("Budgets"), self)
-        self.actionShowBudgets.setShortcut("Ctrl+5")
-        self.actionShowBudgets.setIcon(QIcon(QPixmap(':/budget_48')))
         self.actionReconcileSelected = QAction(tr("Reconcile Selection"), self)
         self.actionReconcileSelected.setShortcut("Ctrl+R")
         self.actionMakeScheduleFromSelected = QAction(tr("Make Schedule from Selected"), self)
@@ -271,7 +265,6 @@ class MainWindow(QMainWindow):
         self.menuView.addAction(self.actionShowProfitLoss)
         self.menuView.addAction(self.actionShowTransactions)
         self.menuView.addAction(self.actionShowSchedules)
-        self.menuView.addAction(self.actionShowBudgets)
         self.menuView.addAction(self.actionShowPreviousView)
         self.menuView.addAction(self.actionShowNextView)
         self.menuView.addAction(self.menuDateRange.menuAction())
@@ -331,7 +324,6 @@ class MainWindow(QMainWindow):
         self.actionShowProfitLoss.triggered.connect(self.showProfitLossTriggered)
         self.actionShowTransactions.triggered.connect(self.showTransactionsTriggered)
         self.actionShowSchedules.triggered.connect(self.showSchedulesTriggered)
-        self.actionShowBudgets.triggered.connect(self.showBudgetsTriggered)
         self.actionShowPreviousView.triggered.connect(self.showPreviousViewTriggered)
         self.actionShowNextView.triggered.connect(self.showNextViewTriggered)
         self.actionShowPreferences.triggered.connect(self.app.showPreferences)
@@ -437,7 +429,6 @@ class MainWindow(QMainWindow):
             PaneType.Transaction: tr("New Transaction"),
             PaneType.Account: tr("New Transaction"),
             PaneType.Schedule: tr("New Schedule"),
-            PaneType.Budget: tr("New Budget"),
             PaneType.GeneralLedger: tr("New Transaction"),
         }.get(viewType, tr("New Item")) # XXX make "New Item" disabled
         self.actionNewItem.setText(newItemLabel)
@@ -552,9 +543,6 @@ class MainWindow(QMainWindow):
 
     def showSchedulesTriggered(self):
         self.model.select_pane_of_type(PaneType.Schedule)
-
-    def showBudgetsTriggered(self):
-        self.model.select_pane_of_type(PaneType.Budget)
 
     def showPreviousViewTriggered(self):
         self.model.select_previous_view()

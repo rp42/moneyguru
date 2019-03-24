@@ -5,7 +5,6 @@
 # http://www.gnu.org/licenses/gpl-3.0.html
 
 from core.trans import tr
-from ..model.date import DateRange
 from .balance_graph import BalanceGraph
 
 class NetWorthGraph(BalanceGraph):
@@ -18,10 +17,6 @@ class NetWorthGraph(BalanceGraph):
             return entries.balance(date, self._currency)
 
         return sum(map(bal, self._accounts))
-
-    def _budget_for_date(self, date):
-        date_range = DateRange(date.min, date)
-        return self.document.budgeted_amount(date_range)
 
     def compute_data(self):
         accounts = set(a for a in self.document.accounts if a.is_balance_sheet_account())

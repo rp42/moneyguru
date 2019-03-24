@@ -24,7 +24,6 @@ class PaneType:
     Transaction = 2
     Account = 3
     Schedule = 4
-    Budget = 5
     GeneralLedger = 7
     DocProps = 8
     PluginList = 9

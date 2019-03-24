@@ -264,22 +264,6 @@ class TestApp(TestAppBase):
         for name in names:
             self.add_account(name)
 
-    def add_budget(
-            self, account_name, str_amount, start_date=None,
-            repeat_type_index=2, repeat_every=1):
-        # if no target, set target_name to None
-        bview = self.show_bview()
-        bpanel = self.mainwindow.new_item()
-        if start_date is None:
-            start_date = self.app.format_date(date(date.today().year, date.today().month, 1))
-        bview.start_date = start_date
-        bview.repeat_type_list.select(repeat_type_index)
-        bview.repeat_every = repeat_every
-        account_index = bpanel.account_list.index(account_name)
-        bpanel.account_list.select(account_index)
-        bpanel.amount = str_amount
-        bpanel.save()
-
     def add_entry(self, date=None, description=None, payee=None, transfer=None, increase=None,
             decrease=None, checkno=None, reconciliation_date=None):
         # This whole "if not None" thing allows to simulate a user tabbing over fields leaving the
@@ -640,13 +624,6 @@ class TestApp(TestAppBase):
         self.mw.select_pane_of_type(PaneType.Account)
         return self.current_view()
 
-    def show_bview(self):
-        self.mw.select_pane_of_type(PaneType.Budget)
-        if not hasattr(self, 'bview'):
-            self.bview = self.current_view()
-            self.btable = self.link_gui(self.bview.table)
-        return self.current_view()
-
     def show_scview(self):
         self.mw.select_pane_of_type(PaneType.Schedule)
         if not hasattr(self, 'scview'):
@@ -738,13 +715,6 @@ def compare_apps(first, second, qif_mode=False):
             txn1 = rec1.date2globalchange[date_]
             txn2 = rec2.date2globalchange[date_]
             compare_txns(txn1, txn2)
-    eq_(first.budgets.repeat_type, second.budgets.repeat_type)
-    eq_(first.budgets.start_date, second.budgets.start_date)
-    eq_(first.budgets.repeat_every, second.budgets.repeat_every)
-    for budget1, budget2 in zip(first.budgets, second.budgets):
-        eq_(budget1.account.name, budget2.account.name)
-        eq_(budget1.amount, budget2.amount)
-        eq_(budget1.notes, budget2.notes)
 
 def print_table(table, extra_attrs=[]):
     def getval(row, attrname):

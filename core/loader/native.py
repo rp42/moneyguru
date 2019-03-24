@@ -7,11 +7,10 @@
 import datetime
 import xml.etree.cElementTree as ET
 
-from core.util import tryint, nonone
+from core.util import tryint
 
 from ..exception import FileFormatError
 from ..model._ccore import Transaction
-from ..model.budget import Budget, BudgetList
 from ..model.oven import Oven
 from ..model.recurrence import Recurrence, Spawn
 from . import base
@@ -29,8 +28,7 @@ class Loader(base.Loader):
         # I did not manage to create a repeatable test for it, but self.schedules has to be ordered
         # because the order in which the spawns are created must stay the same
         self.schedules = []
-        self.budgets = BudgetList()
-        self.oven = Oven(self.accounts, self.transactions, self.schedules, self.budgets)
+        self.oven = Oven(self.accounts, self.transactions, self.schedules)
         self.properties = {}
         self.document_id = None
 
@@ -158,27 +156,3 @@ class Loader(base.Loader):
                 except KeyError:
                     continue
             self.schedules.append(recurrence)
-        budgets = list(root.iter('budget'))
-        if budgets:
-            attrib = budgets[0].attrib
-            start_date = str2date(attrib.get('start_date'))
-            if start_date:
-                self.budgets.start_date = start_date
-            self.budgets.repeat_type = attrib.get('type')
-            repeat_every = tryint(attrib.get('every'), default=None)
-            if repeat_every:
-                self.budgets.repeat_every = repeat_every
-        for budget_element in budgets:
-            attrib = budget_element.attrib
-            account_name = attrib.get('account')
-            amount = attrib.get('amount')
-            notes = attrib.get('notes')
-            if not (account_name and amount):
-                continue
-            account = self.accounts.find(account_name)
-            if account is None:
-                continue
-            amount = parse_amount(amount, account.currency)
-            budget = Budget(account, amount)
-            budget.notes = nonone(notes, '')
-            self.budgets.append(budget)

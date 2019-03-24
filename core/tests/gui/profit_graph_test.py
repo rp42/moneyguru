@@ -54,36 +54,6 @@ class TestIncomesAndExpensesInDifferentAccounts:
         return app
 
     @with_app(do_setup)
-    def test_budget(self, app, monkeypatch):
-        # budgets are counted in the pgraph
-        monkeypatch.patch_today(2008, 7, 18)
-        app.add_budget('income1', '400') # +180
-        app.show_pview()
-        amounts = [data[2:] for data in app.pgraph.data]
-        first_week = 50 + 80 + 32 + 22 - 7.04
-        second_week = 90 - 100
-        third_week = 54
-        # now for the budget. 13 days in the future, 2 in the 3rd week, 7 in the 4th and 4 in the 5th
-        third_week_future = 27.69 # 180 / 13 * 2
-        fourth_week_future = 96.92 # 180 / 13 * 7
-        fifth_week_future = 55.38 + 38.71 # (180 / 13 * 4) + (400 / 31 * 3)
-        expected = [(first_week, 0), (second_week, 0), (third_week, third_week_future),
-            (0, fourth_week_future), (0, fifth_week_future)]
-        eq_(amounts, expected)
-
-    @with_app(do_setup)
-    def test_budget_and_exclusion(self, app, monkeypatch):
-        # when an account is excluded, it's budget is not counted
-        monkeypatch.patch_today(2008, 7, 18)
-        app.add_budget('income1', '400') # +180
-        app.show_pview()
-        app.istatement.toggle_excluded()
-        # same as test_exclude_account
-        amounts = [data[2] for data in app.pgraph.data]
-        expected = [32 + 22 - 7.04, -100, 54]
-        eq_(amounts, expected)
-
-    @with_app(do_setup)
     def test_exclude_account(self, app):
         # excluding an account removes it from the net worth graph
         app.istatement.selected = app.istatement.income[0]

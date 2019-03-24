@@ -20,16 +20,16 @@ from .transaction_panel import TransactionPanel
 
 class TransactionViewBase(BaseView):
     def edit_selected_transactions(self):
-        editable_txns = [txn for txn in self.mainwindow.selected_transactions if not txn.is_budget]
-        if len(editable_txns) > 1:
+        txns = self.mainwindow.selected_transactions
+        if len(txns) > 1:
             panel = MassEditionPanel(self.mainwindow)
             panel.view = weakref.proxy(self.view.get_panel_view(panel))
-            panel.load(editable_txns)
+            panel.load(txns)
             return panel
-        elif len(editable_txns) == 1:
+        elif len(txns) == 1:
             panel = TransactionPanel(self.mainwindow)
             panel.view = weakref.proxy(self.view.get_panel_view(panel))
-            panel.load(editable_txns[0])
+            panel.load(txns[0])
             return panel
 
     # --- Virtuals

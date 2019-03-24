@@ -48,34 +48,6 @@ class TestAssetsAndLiabilitiesInDifferentAccounts:
         assert app.nw_graph_data()
 
     @with_app(do_setup)
-    def test_budget(self, app, monkeypatch):
-        # when we add a budget, the balance graph will show a regular
-        # progression throughout date range
-        monkeypatch.patch_today(2008, 7, 27)
-        app.add_account('income', account_type=AccountType.Income)
-        app.add_account('expense', account_type=AccountType.Expense)
-        app.add_budget('income', '300')
-        app.add_budget('expense', '100')
-        app.show_nwview()
-        # this means 200$ profit in 4 days
-        app.show_nwview()
-        expected = [
-            ('01/07/2008', '10.00'),
-            ('02/07/2008', '34.96'), # 32 - 10 * 1.42 (the mock xchange rate)
-            ('03/07/2008', '34.96'),
-            ('04/07/2008', '84.96'), # + 50
-            ('05/07/2008', '84.96'),
-            ('06/07/2008', '186.96'), # + 80 + 22
-            ('08/07/2008', '186.96'),
-            ('09/07/2008', '86.96'), # - 100
-            ('15/07/2008', '86.96'),
-            ('16/07/2008', '87.51'), # currency value change
-            ('28/07/2008', '87.51'),
-            ('01/08/2008', '287.51'),
-        ]
-        eq_(app.nw_graph_data(), expected)
-
-    @with_app(do_setup)
     def test_exclude_account(self, app):
         # excluding an account removes it from the net worth graph
         app.bsheet.selected = app.bsheet.liabilities[0] # that CAD account

@@ -12,7 +12,7 @@ import pytest
 
 from .testutil import eq_
 
-from ..const import PaneType, AccountType
+from ..const import PaneType
 from ..document import ScheduleScope
 from ..model.date import MonthRange
 from .base import compare_apps, testdata, TestApp, with_app
@@ -38,7 +38,6 @@ def copydoc(doc):
         newdoc.entrycounts[a.name] = len(entries)
     newdoc.transactions = [t.replicate() for t in newdoc.transactions]
     newdoc.schedules = [s.replicate() for s in newdoc.schedules]
-    newdoc.budgets = copy.copy(newdoc.budgets)
     return newdoc
 
 @pytest.fixture
@@ -705,37 +704,4 @@ def test_reconcile_spawn_by_toggling(app, checkstate):
     app.show_account('account')
     app.aview.toggle_reconciliation_mode()
     app.etable[0].toggle_reconciled()
-    checkstate()
-
-# ---
-def app_with_budget(monkeypatch):
-    app = TestApp()
-    monkeypatch.patch_today(2008, 1, 27)
-    app.drsel.select_today_date_range()
-    app.add_account('Some Expense', account_type=AccountType.Expense)
-    app.add_budget('Some Expense', '100')
-    app.show_bview()
-    app.btable.select([0])
-    return app
-
-@with_app(app_with_budget)
-def test_change_budget(app, checkstate):
-    bpanel = app.mw.edit_item()
-    bpanel.load()
-    bpanel.amount = '123'
-    bpanel.save()
-    checkstate()
-
-@with_app(app_with_budget)
-def test_delete_account_with_budget(app, checkstate):
-    app.show_pview()
-    app.istatement.selected = app.istatement.expenses[0]
-    app.istatement.delete()
-    arpanel = app.get_current_panel()
-    arpanel.save()
-    checkstate()
-
-@with_app(app_with_budget)
-def test_delete_budget(app, checkstate):
-    app.btable.delete()
     checkstate()

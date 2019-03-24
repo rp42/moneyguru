@@ -78,31 +78,6 @@ class TestSomeIncomeTodayAndInTheFuture:
         eq_(app.bargraph.data[0][2:], (30, 12))
 
 
-class TestAccountAndEntriesAndBudget:
-    def do_setup(self, monkeypatch):
-        # Weeks of Jan: 31-6 7-13 14-20 21-27 28-3
-        app = TestApp()
-        app.drsel.select_month_range()
-        app.add_account('Account 1', account_type=AccountType.Income)
-        monkeypatch.patch_today(2008, 1, 17)
-        app.add_budget('Account 1', '400')
-        app.show_pview()
-        app.istatement.selected = app.istatement.income[0]
-        app.show_account()
-        app.add_entry('10/01/2008', 'Entry 1', increase='100.00')
-        app.add_entry('14/01/2008', 'Entry 2', increase='150.00')
-        return app
-
-    @with_app(do_setup)
-    def test_cash_flow_with_budget(self, app):
-        # Must include the budget. 250 of the 400 are spent, there's 150 left to add proportionally
-        # in the remaining weeks.
-        eq_(app.bargraph.data[0][2:], (100, 0)) # week 2
-        # there are 14 days left, week 3 contains 3 of them. Therefore, the budget amount is
-        # (150 / 14) * 3 --> 32.14
-        eq_(app.bargraph.data[1][2:], (150, 32.14)) # week 3
-
-
 class TestRunningYearWithSomeIncome:
     def do_setup(self, monkeypatch):
         monkeypatch.patch_today(2008, 11, 1)

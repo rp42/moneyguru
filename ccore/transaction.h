@@ -6,7 +6,6 @@
 typedef enum {
     TXN_TYPE_NORMAL = 1,
     TXN_TYPE_RECURRENCE = 2,
-    TXN_TYPE_BUDGET = 3,
 } TransactionType;
 
 /* A movement of money between two or more accounts at a specific date.
@@ -20,8 +19,8 @@ typedef enum {
  *
  * SPAWNS
  *
- * Transactions of type RECURRENCE and BUDGET are called "spawns". Spawns are
- * instances of a recurrent transaction at a specific date.
+ * Transactions of type RECURRENCE are called "spawns". Spawns are instances of
+ * a recurrent transaction at a specific date.
  *
  * Recurrences are transactions that are repeated multiple times. Spawns are
  * specific occurrences of a schedule. It's the spawn, not the schedule, that

@@ -10,7 +10,6 @@ from core.util import extract
 SPLIT_SWAP_ATTRS = ['account', 'amount', 'reconciliation_date']
 SCHEDULE_SWAP_ATTRS = ['repeat_type', 'repeat_every', 'stop_date', 'date2exception',
                        'date2globalchange', 'date2instances']
-BUDGET_SWAP_ATTRS = ['account', 'amount']
 
 def swapvalues(first, second, attrs):
     for attr in attrs:
@@ -25,7 +24,7 @@ class Action:
     containing instances.  These set's are not documented individually to
     reduce verbosity, but there's 3 types (``added``, ``changed`` and
     ``deleted``) of sets for each supported instance (``accounts``,
-    ``transactions``, ``schedules``, ``budgets``).
+    ``transactions``, ``schedules``).
 
     For ``added`` and ``deleted``, it's rather easy. The set contains instances directly. For
     ``change``, it's different. The set contains 2-sized tuples ``(instance, backup)``. Whenever
@@ -49,9 +48,6 @@ class Action:
         self.added_schedules = set()
         self.changed_schedules = {}
         self.deleted_schedules = set()
-        self.added_budgets = set()
-        self.changed_budgets = {}
-        self.deleted_budgets = set()
 
     def change_accounts(self, accounts):
         """Record imminent changes to ``accounts``."""
@@ -61,11 +57,6 @@ class Action:
         """Record imminent changes to ``schedule``."""
         if schedule not in self.changed_schedules:
             self.changed_schedules[schedule] = schedule.replicate()
-
-    def change_budget(self, budget):
-        """Record imminent changes to ``budget``."""
-        if budget not in self.changed_budgets:
-            self.changed_budgets[budget] = budget.replicate()
 
     def change_transactions(self, transactions, schedules):
         """Record imminent changes to ``transactions``.
@@ -97,21 +88,18 @@ class Undoer:
     (most of the time, it's the last action). When we undo or redo an action, we use the information
     we has stored in our action and make proper modifications, then move our action index.
     """
-    def __init__(self, accounts, transactions, scheduled, budgets):
+    def __init__(self, accounts, transactions, scheduled):
         self._actions = []
         self._accounts = accounts
         self._transactions = transactions
         self._scheduled = scheduled
-        self._budgets = budgets
         self._index = -1
         self._save_point = None
 
     # --- Private
-    def _do_adds(self, accounts, schedules, budgets):
+    def _do_adds(self, accounts, schedules):
         for schedule in schedules:
             self._scheduled.append(schedule)
-        for budget in budgets:
-            self._budgets.append(budget)
 
     def _do_changes(self, action):
         for schedule, old in action.changed_schedules.items():
@@ -119,14 +107,10 @@ class Undoer:
             newold = schedule.ref.replicate()
             schedule.ref.copy_from(old.ref)
             old.ref.copy_from(newold)
-        for budget, old in action.changed_budgets.items():
-            swapvalues(budget, old, BUDGET_SWAP_ATTRS)
 
-    def _do_deletes(self, accounts, schedules, budgets):
+    def _do_deletes(self, accounts, schedules):
         for schedule in schedules:
             self._scheduled.remove(schedule)
-        for budget in budgets:
-            self._budgets.remove(budget)
 
     # --- Public
     def can_redo(self):
@@ -203,10 +187,9 @@ class Undoer:
         action.undostep.undo(self._accounts, self._transactions)
         self._do_adds(
             action.deleted_accounts, action.deleted_schedules,
-            action.deleted_budgets
         )
         self._do_deletes(
-            action.added_accounts, action.added_schedules, action.added_budgets
+            action.added_accounts, action.added_schedules
         )
         self._do_changes(action)
         self._transactions.clear_cache()
@@ -224,11 +207,10 @@ class Undoer:
         action = self._actions[self._index + 1]
         action.undostep.redo(self._accounts, self._transactions)
         self._do_adds(
-            action.added_accounts, action.added_schedules, action.added_budgets
+            action.added_accounts, action.added_schedules
         )
         self._do_deletes(
             action.deleted_accounts, action.deleted_schedules,
-            action.deleted_budgets
         )
         self._do_changes(action)
         self._transactions.clear_cache()

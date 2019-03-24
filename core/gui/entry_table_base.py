@@ -33,7 +33,6 @@ class BaseEntryTableRow(Row, RowWithDateMixIn, RowWithDebitAndCreditMixIn):
         self._reconciled = False
         self._reconciliation_date = None
         self._recurrent = False
-        self._is_budget = False
         self.is_bold = False
 
     def _the_balance(self):
@@ -65,13 +64,11 @@ class BaseEntryTableRow(Row, RowWithDateMixIn, RowWithDebitAndCreditMixIn):
                 rdate = datetime.date.max
             return (rdate, self._date, self._position)
         elif column_name == 'status':
-            # First reconciled, then plain ones, then schedules, then budgets
+            # First reconciled, then plain ones, then schedules
             if self.reconciled:
                 return 0
             elif self.recurrent:
                 return 2
-            elif self.is_budget:
-                return 3
             else:
                 return 1
         else:
@@ -131,10 +128,6 @@ class BaseEntryTableRow(Row, RowWithDateMixIn, RowWithDebitAndCreditMixIn):
     def recurrent(self):
         return self._recurrent
 
-    @property
-    def is_budget(self):
-        return self._is_budget
-
 
 AUTOFILL_ATTRS = {'description', 'payee', 'transfer', 'increase', 'decrease'}
 AMOUNT_AUTOFILL_ATTRS = {'increase', 'decrease'}
@@ -190,7 +183,7 @@ class EntryTableRow(BaseEntryTableRow):
             setattr(self, propname, parsed)
 
     def can_edit(self):
-        return not self.is_budget
+        return True
 
     def can_reconcile(self):
         inmode = self.table.reconciliation_mode
@@ -205,11 +198,10 @@ class EntryTableRow(BaseEntryTableRow):
         self._load_from_fields(entry, self.FIELDS)
         self._position = entry.transaction.position
         self._transfer = ', '.join(s.combined_display for s in entry.transfer)
-        self._balance = entry.balance_with_budget
+        self._balance = entry.balance
         self._reconciled_balance = entry.reconciled_balance if entry.reconciled else None
         self._reconciled = entry.reconciled
         self._recurrent = entry.transaction.is_spawn
-        self._is_budget = entry.transaction.is_budget
 
     def save(self):
         entry = self.entry
@@ -389,7 +381,7 @@ class EntryTableBase(TransactionTableBase):
             entries = self.document.accounts.entries_for_account(account)
             prev_entry = entries.last_entry(date_range.start-ONE_DAY)
             if prev_entry is not None:
-                balance = prev_entry.balance_with_budget
+                balance = prev_entry.balance
                 rbalance = prev_entry.reconciled_balance
                 result.append(PreviousBalanceRow(self, date_range.start, balance, rbalance, account))
         total_debit = 0

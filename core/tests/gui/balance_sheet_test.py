@@ -492,31 +492,6 @@ def test_balance_sheet_with_entries(app):
     eq_(app.bsheet.net_worth.end, '330.00')
 
 @with_app(app_accounts_and_entries)
-def test_budget(app, monkeypatch):
-    # Account 1 is the target of the expense budget, and Account 2 is the target of the income
-    # Assign budgeted amounts to the appropriate accounts.
-    monkeypatch.patch_today(2008, 1, 15)
-    app.add_budget('income', '400') # + 150
-    app.add_budget('expense', '100') # + 80
-    app.show_nwview()
-    eq_(app.bsheet.assets[0].end, '250.00')
-    eq_(app.bsheet.assets[1].end, '80.00')
-    eq_(app.bsheet.assets.end, '330.00')
-    # NOTE: this value tested below is going to move to the budget view
-    eq_(app.bsheet.net_worth.budgeted, '70.00')
-    # When we go to the next date range, the "budgeted" value must be cumulated
-    app.drsel.select_next_date_range()
-    eq_(app.bsheet.net_worth.budgeted, '370.00')
-
-@with_app(app_accounts_and_entries)
-def test_budget_without_target(app, monkeypatch):
-    # The Net Worth's "budgeted" column counts all budgets, including target-less ones
-    monkeypatch.patch_today(2008, 1, 15)
-    app.add_budget('income', '400')
-    app.show_nwview()
-    eq_(app.bsheet.net_worth.budgeted, '150.00')
-
-@with_app(app_accounts_and_entries)
 def test_change_date_range(app):
     app.drsel.select_prev_date_range()
     eq_(app.bsheet.assets[0].end, '0.00')
