@@ -121,6 +121,16 @@ static PyObject *TransactionList_Type;
 
 typedef struct {
     PyObject_HEAD
+    PyTransaction *ref;
+    PyObject *stop_date;
+    PyObject *repeat_type;
+    int repeat_every;
+} PyRecurrence;
+
+static PyObject *Recurrence_Type;
+
+typedef struct {
+    PyObject_HEAD
     UndoStep step;
 } PyUndoStep;
 
@@ -2745,6 +2755,115 @@ PyAccountList_dealloc(PyAccountList *self)
     Py_TYPE(self)->tp_free(self);
 }
 
+/* PyRecurrence functions */
+static int
+PyRecurrence_init(PyRecurrence *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {
+        "ref", "repeat_type", "repeat_every", NULL};
+
+    int res = PyArg_ParseTupleAndKeywords(
+        args, kwds, "OOi", kwlist,
+        &self->ref,
+        &self->repeat_type,
+        &self->repeat_every);
+    if (!res) {
+        return -1;
+    }
+
+    Py_INCREF(self->ref);
+    Py_INCREF(self->repeat_type);
+    self->stop_date = Py_None;
+    Py_INCREF(Py_None);
+    return 0;
+}
+
+static void
+PyRecurrence_dealloc(PyRecurrence *self)
+{
+    Py_DECREF(self->ref);
+    Py_DECREF(self->stop_date);
+    Py_DECREF(self->repeat_type);
+    Py_TYPE(self)->tp_free(self);
+}
+
+static PyObject*
+PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
+{
+    PyObject *start_date = NULL;
+    PyObject *stop_date = NULL;
+    PyObject *repeat_type = NULL;
+    int repeat_every = -1;
+    static char *kwlist[] = {"start_date", "stop_date", "repeat_type",
+        "repeat_every", NULL};
+
+    int res = PyArg_ParseTupleAndKeywords(args, kwds, "|OOOi", kwlist,
+        &start_date, &stop_date, &repeat_type, &repeat_every);
+    if (!res) {
+        return NULL;
+    }
+
+    if (start_date != NULL) {
+        PyTransaction_date_set(self->ref, start_date);
+    }
+    if (stop_date != NULL) {
+        Py_DECREF(self->stop_date);
+        self->stop_date = stop_date;
+        Py_INCREF(self->stop_date);
+    }
+    if (repeat_type != NULL) {
+        Py_DECREF(self->repeat_type);
+        self->repeat_type = repeat_type;
+        Py_INCREF(self->repeat_type);
+    }
+    if (repeat_every > 0) {
+        self->repeat_every = repeat_every;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+PyRecurrence_start_date(PyRecurrence *self)
+{
+    return PyTransaction_date(self->ref);
+}
+
+static PyObject *
+PyRecurrence_stop_date(PyRecurrence *self)
+{
+    Py_INCREF(self->stop_date);
+    return self->stop_date;
+}
+
+static PyObject *
+PyRecurrence_repeat_type(PyRecurrence *self)
+{
+    Py_INCREF(self->repeat_type);
+    return self->repeat_type;
+}
+
+static PyObject *
+PyRecurrence_repeat_every(PyRecurrence *self)
+{
+    return PyLong_FromLong(self->repeat_every);
+}
+
+static PyObject *
+PyRecurrence_ref(PyRecurrence *self)
+{
+    Py_INCREF(self->ref);
+    return (PyObject *)self->ref;
+}
+
+static int
+PyRecurrence_ref_set(PyRecurrence *self, PyTransaction *value)
+{
+    Py_DECREF(self->ref);
+    self->ref = value;
+    Py_INCREF(self->ref);
+    return 0;
+}
+
 /* Oven functions */
 
 /* "Cook" txns into Entry with running balances
@@ -3617,6 +3736,36 @@ PyType_Spec TransactionList_Type_Spec = {
     TransactionList_Slots,
 };
 
+static PyMethodDef PyRecurrence_methods[] = {
+    {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
+    {0, 0, 0, 0},
+};
+
+static PyGetSetDef PyRecurrence_getseters[] = {
+    {"start_date", (getter)PyRecurrence_start_date, NULL, NULL, NULL},
+    {"stop_date", (getter)PyRecurrence_stop_date, NULL, NULL, NULL},
+    {"repeat_type", (getter)PyRecurrence_repeat_type, NULL, NULL, NULL},
+    {"repeat_every", (getter)PyRecurrence_repeat_every, NULL, NULL, NULL},
+    {"ref", (getter)PyRecurrence_ref, (setter)PyRecurrence_ref_set, NULL, NULL},
+    {0, 0, 0, 0, 0},
+};
+
+static PyType_Slot Recurrence_Slots[] = {
+    {Py_tp_init, PyRecurrence_init},
+    {Py_tp_methods, PyRecurrence_methods},
+    {Py_tp_getset, PyRecurrence_getseters},
+    {Py_tp_dealloc, PyRecurrence_dealloc},
+    {0, 0},
+};
+
+PyType_Spec Recurrence_Type_Spec = {
+    "_ccore.Recurrence",
+    sizeof(PyRecurrence),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    Recurrence_Slots,
+};
+
 static PyMethodDef PyUndoStep_methods[] = {
     {"undo", (PyCFunction)PyUndoStep_undo, METH_VARARGS, ""},
     {"redo", (PyCFunction)PyUndoStep_redo, METH_VARARGS, ""},
@@ -3694,6 +3843,9 @@ PyInit__ccore(void)
 
     TransactionList_Type = PyType_FromSpec(&TransactionList_Type_Spec);
     PyModule_AddObject(m, "TransactionList", TransactionList_Type);
+
+    Recurrence_Type = PyType_FromSpec(&Recurrence_Type_Spec);
+    PyModule_AddObject(m, "Recurrence", Recurrence_Type);
 
     UndoStep_Type = PyType_FromSpec(&UndoStep_Type_Spec);
     PyModule_AddObject(m, "UndoStep", UndoStep_Type);

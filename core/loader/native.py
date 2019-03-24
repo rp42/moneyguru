@@ -133,7 +133,7 @@ class Loader(base.Loader):
             repeat_type = attrib.get('type')
             repeat_every = int(attrib.get('every', '1'))
             recurrence = Recurrence(ref, repeat_type, repeat_every)
-            recurrence.stop_date = str2date(attrib.get('stop_date'))
+            recurrence.change(stop_date=str2date(attrib.get('stop_date')))
             for exception_element in recurrence_element.iter('exception'):
                 try:
                     date = str2date(exception_element.attrib['date'])

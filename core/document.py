@@ -115,6 +115,7 @@ class Document(GUIObject):
             os.remove(op.join(self.app.cache_path, existing_names[0]))
 
     def _change_transaction(self, transaction, global_scope=False, **kwargs):
+        print(repr(transaction.ref))
         date = kwargs.get('date', NOEDIT)
         date_changed = date is not NOEDIT and date != transaction.date
         kws = {k: v for k, v in kwargs.items() if v is not NOEDIT}
@@ -420,7 +421,7 @@ class Document(GUIObject):
                 schedule = find_schedule_of_ref(txn.ref, self.schedules)
                 assert schedule is not None
                 if global_scope:
-                    schedule.stop_date = txn.recurrence_date - datetime.timedelta(1)
+                    schedule.change(stop_date=txn.recurrence_date - datetime.timedelta(1))
                 else:
                     schedule.delete_at(txn.recurrence_date)
             else:
@@ -597,9 +598,9 @@ class Document(GUIObject):
         )
         schedule.change(
             start_date=new_ref.date,
+            stop_date=stop_date,
             repeat_type=repeat_type,
             repeat_every=repeat_every)
-        schedule.stop_date = stop_date
         schedule.reset_spawn_cache()
         if schedule not in self.schedules:
             self.schedules.append(schedule)

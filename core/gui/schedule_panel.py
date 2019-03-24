@@ -140,7 +140,8 @@ class SchedulePanel(PanelWithTransaction, WithScheduleMixIn):
     @stop_date.setter
     def stop_date(self, value):
         try:
-            self.schedule.stop_date = self.app.parse_date(value)
+            stop_date = self.app.parse_date(value)
         except (ValueError, TypeError):
-            self.schedule.stop_date = None
+            stop_date = None
+        self.schedule.change(stop_date=stop_date)
 

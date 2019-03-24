@@ -4,7 +4,6 @@
 # which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-import copy
 import datetime
 from calendar import monthrange
 from itertools import chain
@@ -12,7 +11,7 @@ from itertools import chain
 from core.util import nonone, first
 from core.trans import tr
 
-from ._ccore import Transaction, inc_date
+from ._ccore import Transaction, inc_date, Recurrence as _Recurrence
 from .date import RepeatType
 
 def find_schedule_of_ref(ref, schedules):
@@ -156,12 +155,7 @@ class Recurrence:
         if repeat_type not in RepeatType.ALL:
             # invalid repeat type, default to monthly
             repeat_type = RepeatType.Monthly
-        #: :class:`.Transaction`. The model transaction that's going to be regularly spawned.
-        self.ref = ref
-        self._repeat_type = repeat_type
-        self._repeat_every = repeat_every
-        #: Date at which our recurrence stops. When ``None`` (the default), it never ends.
-        self.stop_date = None
+        self._inner = _Recurrence(ref, repeat_type, repeat_every)
         #: ``recurrent_date -> transaction`` mapping of schedule exceptions.
         self.date2exception = {}
         #: ``recurrent_date -> transaction`` mapping of *global* schedule exceptions.
@@ -186,9 +180,9 @@ class Recurrence:
             if d in self.date2exception and self.date2exception[d] is None:
                 continue
             if d in self.date2globalchange:
-                self.ref = self.date2globalchange[d].replicate()
+                self._inner.ref = self.date2globalchange[d].replicate()
             else:
-                self.ref.date = d
+                self._inner.change(start_date=d)
             break
         self.date2exception = {d: ex for d, ex in self.date2exception.items() if d > self.start_date}
         self.date2globalchange = {d: ex for d, ex in self.date2globalchange.items() if d > self.start_date}
@@ -211,18 +205,13 @@ class Recurrence:
         also checks in exception instances to make there there isn't another affected account in
         there.
         """
-        result = self.ref.affected_accounts()
+        result = self._inner.ref.affected_accounts()
         for exception in self._all_exceptions():
             result |= exception.affected_accounts()
         return result
 
-    def change(self, start_date=None, repeat_type=None, repeat_every=None):
-        if start_date is not None and start_date != self.ref.date:
-            self.ref.date = start_date
-        if repeat_type is not None and repeat_type != self._repeat_type:
-            self._repeat_type = repeat_type
-        if repeat_every is not None and repeat_every != self._repeat_every:
-            self._repeat_every = repeat_every
+    def change(self, **kwargs):
+        self._inner.change(**kwargs)
         self.reset_exceptions()
 
     def change_globally(self, spawn):
@@ -242,7 +231,7 @@ class Recurrence:
         self._update_ref()
 
     def contains_ref(self, ref):
-        if self.ref == ref:
+        if self._inner.ref == ref:
             return True
         if ref in self.date2globalchange.values():
             return True
@@ -283,7 +272,7 @@ class Recurrence:
         date_counter = DateCounter(self.start_date, self.repeat_type, self.repeat_every, end)
         result = []
         global_date_delta = datetime.timedelta(days=0)
-        current_ref = self.ref
+        current_ref = self._inner.ref
         for current_date in date_counter:
             if current_date in self.date2globalchange:
                 current_ref = self.date2globalchange[current_date]
@@ -309,18 +298,19 @@ class Recurrence:
         .. seealso:: :meth:`affected_accounts`
                      :meth:`~core.model.transaction.Transaction.reassign_account`
         """
-        self.ref.reassign_account(account, reassign_to)
+        self._inner.ref.reassign_account(account, reassign_to)
         for exception in self._all_exceptions():
             exception.reassign_account(account, reassign_to)
         self.reset_spawn_cache()
 
     def replicate(self):
         """Returns a copy of ``self``."""
-        result = copy.copy(self)
-        result.date2exception = copy.copy(self.date2exception)
-        result.date2globalchange = copy.copy(self.date2globalchange)
+        result = Recurrence(
+            self._inner.ref.replicate(), self.repeat_type, self.repeat_every)
+        result.change(stop_date=self.stop_date)
+        result.date2exception = dict(self.date2exception)
+        result.date2globalchange = dict(self.date2globalchange)
         result.date2instances = {}
-        result.ref = self.ref.replicate()
         return result
 
     def reset_exceptions(self):
@@ -343,12 +333,12 @@ class Recurrence:
     @property
     def repeat_every(self):
         """``int``. See :class:`DateCounter`."""
-        return self._repeat_every
+        return self._inner.repeat_every
 
     @property
     def repeat_type(self):
         """:class:`RepeatType`. See :class:`DateCounter`."""
-        return self._repeat_type
+        return self._inner.repeat_type
 
     @property
     def start_date(self):
@@ -356,4 +346,17 @@ class Recurrence:
 
         Same as the :attr:`Transaction.date` attribute of :attr:`ref`.
         """
-        return self.ref.date
+        return self._inner.start_date
+
+    @property
+    def stop_date(self):
+        return self._inner.stop_date
+
+    @property
+    def ref(self):
+        return self._inner.ref
+
+    @ref.setter
+    def ref(self, value):
+        self._inner.ref = value
+        self.reset_spawn_cache()
