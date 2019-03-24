@@ -1901,7 +1901,7 @@ PyTransaction_richcompare(PyTransaction *a, PyObject *b, int op)
 }
 
 static PyObject *
-PyTransaction_replicate(PyTransaction *self, PyObject *noarg)
+PyTransaction_replicate(PyTransaction *self)
 {
     PyTransaction *res = (PyTransaction *)PyType_GenericAlloc((PyTypeObject *)Transaction_Type, 0);
     res->txn = calloc(1, sizeof(Transaction));
@@ -1913,7 +1913,7 @@ PyTransaction_replicate(PyTransaction *self, PyObject *noarg)
 static PyObject *
 PyTransaction_materialize(PyTransaction *self, PyObject *noarg)
 {
-    PyTransaction *res = (PyTransaction *)PyTransaction_replicate(self, NULL);
+    PyTransaction *res = (PyTransaction *)PyTransaction_replicate(self);
     res->txn->type = TXN_TYPE_NORMAL;
     return (PyObject *)res;
 }
@@ -2900,6 +2900,87 @@ PyRecurrence_update_ref(PyRecurrence *self)
     Py_RETURN_NONE;
 }
 
+/* Returns the list of transactions spawned by our recurrence.
+ *
+ * We start at :attr:`start_date` and end at ``end``. We have to specify an end
+ * to our spawning to avoid getting infinite results.
+ *
+ * If a changed date end up being smaller than the "spawn date", it's possible
+ * that a spawn that should have been spawned for the date range is not
+ * spawned. Therefore, we always spawn at least until the date of the last
+ * exception. For global changes, it's even more complicated. If the global
+ * date delta is negative enough, we can end up with a spawn that doesn't go
+ * far enough, so we must adjust our max date by this delta.
+ */
+static PyObject*
+PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
+{
+    PyTransaction *current_ref = self->ref;
+    time_t end = pydate2time(end_date);
+    time_t start = current_ref->txn->date;
+    int incsize = 0;
+    time_t global_date_delta = 0;
+
+    PyObject *key;
+    PyObject *value;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(self->date2exception, &pos, &key, NULL)) {
+        time_t d = pydate2time(key);
+        if (d > end) {
+            end = d;
+        }
+    }
+    pos = 0;
+    while (PyDict_Next(self->date2globalchange, &pos, &key, &value)) {
+        time_t rd = pydate2time(key);
+        time_t vd = ((PyTransaction *)value)->txn->date;
+        if (vd < rd) {
+            end += (rd - vd);
+        }
+    }
+    if ((self->recurrence.stop > 0) && (end > self->recurrence.stop)) {
+        end = self->recurrence.stop;
+    }
+    PyObject *spawns = PyList_New(0);
+    while (true) {
+        time_t date = inc_date(start, self->recurrence.type, incsize);
+        incsize += self->recurrence.every;
+        if (date == -1) {
+            continue;
+        }
+        if (date > end) {
+            break;
+        }
+        PyObject *date_py = time2pydate(date);
+        PyObject *txn = PyDict_GetItem(self->date2globalchange, date_py);
+        if (txn != NULL) {
+            current_ref = (PyTransaction *)txn;
+            global_date_delta = ((PyTransaction *)current_ref)->txn->date - date;
+        }
+        txn = PyDict_GetItem(self->date2exception, date_py);
+        if (txn != NULL) {
+            if (txn != Py_None) {
+                PyList_Append(spawns, txn);
+            }
+        } else {
+            txn = PyDict_GetItem(self->date2instances, date_py);
+            if (txn == NULL) {
+                time_t spawn_date = date + global_date_delta;
+                PyTransaction *spawn = (PyTransaction *)PyTransaction_replicate(current_ref);
+                spawn->txn->type = TXN_TYPE_RECURRENCE;
+                spawn->txn->date = spawn_date;
+                spawn->txn->recurrence_date = date;
+                spawn->txn->ref = current_ref->txn;
+                txn = (PyObject *)spawn;
+                PyDict_SetItem(self->date2instances, date_py, txn);
+            }
+            PyList_Append(spawns, txn);
+        }
+        Py_DECREF(date_py);
+    }
+    return spawns;
+}
+
 static PyObject *
 PyRecurrence_start_date(PyRecurrence *self)
 {
@@ -3826,6 +3907,7 @@ PyType_Spec TransactionList_Type_Spec = {
 
 static PyMethodDef PyRecurrence_methods[] = {
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
+    {"get_spawns", (PyCFunction)PyRecurrence_get_spawns, METH_O, ""},
     {"reset_exceptions", (PyCFunction)PyRecurrence_reset_exceptions, METH_NOARGS, ""},
     {"reset_spawn_cache", (PyCFunction)PyRecurrence_reset_spawn_cache, METH_NOARGS, ""},
     {"update_ref", (PyCFunction)PyRecurrence_update_ref, METH_NOARGS, ""},

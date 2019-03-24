@@ -4,14 +4,13 @@
 # which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-import datetime
 from calendar import monthrange
 from itertools import chain
 
-from core.util import nonone, first
+from core.util import first
 from core.trans import tr
 
-from ._ccore import Transaction, inc_date, Recurrence as _Recurrence
+from ._ccore import Transaction, Recurrence as _Recurrence
 from .date import RepeatType
 
 def find_schedule_of_ref(ref, schedules):
@@ -40,60 +39,6 @@ def get_repeat_type_desc(repeat_type, start_date):
             return tr('Every last %s of the month') % weekday_name
         else:
             return ''
-
-
-class DateCounter:
-    """Iterates over dates in a regular manner.
-
-    This is an iterator, so once we've created our DateCounter, we simply iterate over it to get our
-    dates (we yield ``datetime.date`` instances).
-
-    Sometimes (well, only with ``RepeatType.Weekday``), we have to skip a beat. If, for example, we
-    have to return the 5th friday of the month and that our current month doesn't have it, we skip
-    it and return the first month to have it. So, sometimes, we can have big gap in between our
-    dates.
-
-    :param base_date: Date from which we start our iteration. For weekly repeat types, this date
-                      also determines which weekday we're looking for in our next dates. If our base
-                      date is the 2nd friday of its month, then we're going to iterate over all 2nd
-                      friday of months.
-    :type base_date: datetime.date
-    :param repeat_type: The type of interval we want to put in between our yielded dates.
-    :type repeat_type: :class:`RepeatType`
-    :param int repeat_every: Amplitude of the interval to put in between our dates. For example,
-                             with a monthly repeat type, ``3`` would mean "every 3 months". For
-                             "weekday" types, ``repeat_every`` is also in months.
-    :param datetime.date end: Date at which to stop the iteration.
-
-    .. seealso:: :doc:`/forecast`
-    """
-    def __init__(self, base_date, repeat_type, repeat_every, end):
-        self.base_date = base_date
-        self.end = end
-        self.inccount = 0
-        self.repeat_type = repeat_type
-        self.incsize = repeat_every
-        self.current_date = None
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        # It's possible for a DateCounter to be created with an end date smaller than its start
-        # date. In this case, simply never yield any date.
-        if self.base_date > self.end:
-            raise StopIteration()
-        if self.current_date is None: # first date of the iteration is base_date
-            self.current_date = self.base_date
-            return self.current_date
-        new_date = None
-        while new_date is None:
-            self.inccount += self.incsize
-            new_date = inc_date(self.base_date, self.repeat_type, self.inccount)
-        if new_date <= self.current_date or new_date > self.end:
-            raise StopIteration()
-        self.current_date = new_date
-        return new_date
 
 
 def _Spawn(ref, recurrence_date, date):
@@ -222,52 +167,7 @@ class Recurrence:
         self._inner.update_ref()
 
     def get_spawns(self, end):
-        """Returns the list of transactions spawned by our recurrence.
-
-        We start at :attr:`start_date` and end at ``end``. We have to specify an end to our spawning
-        to avoid getting infinite results.
-
-        .. rubric:: End date adjustment
-
-        If a changed date end up being smaller than the "spawn date", it's possible that a spawn
-        that should have been spawned for the date range is not spawned. Therefore, we always
-        spawn at least until the date of the last exception. For global changes, it's even more
-        complicated. If the global date delta is negative enough, we can end up with a spawn that
-        doesn't go far enough, so we must adjust our max date by this delta.
-
-        :param datetime.date end: When to stop spawning.
-        :rtype: list of :class:`Spawn`
-        """
-        if self._inner.date2exception:
-            end = max(end, max(self._inner.date2exception.keys()))
-        if self._inner.date2globalchange:
-            min_date_delta = min(ref.date-date for date, ref in self._inner.date2globalchange.items())
-            if min_date_delta < datetime.timedelta(days=0):
-                end += -min_date_delta
-        end = min(end, nonone(self.stop_date, datetime.date.max))
-
-        date_counter = DateCounter(self.start_date, self.repeat_type, self.repeat_every, end)
-        result = []
-        global_date_delta = datetime.timedelta(days=0)
-        current_ref = self._inner.ref
-        for current_date in date_counter:
-            if current_date in self._inner.date2globalchange:
-                current_ref = self._inner.date2globalchange[current_date]
-                global_date_delta = current_ref.date - current_date
-            if current_date in self._inner.date2exception:
-                exception = self._inner.date2exception[current_date]
-                if exception is not None:
-                    result.append(exception)
-            else:
-                if current_date not in self._inner.date2instances:
-                    spawn = _Spawn(current_ref, current_date, current_date)
-                    if global_date_delta:
-                        # Only muck with spawn.date if we have a delta. otherwise we're breaking
-                        # budgets.
-                        spawn.date = current_date + global_date_delta
-                    self._inner.date2instances[current_date] = spawn
-                result.append(self._inner.date2instances[current_date])
-        return result
+        return self._inner.get_spawns(end)
 
     def reassign_account(self, account, reassign_to=None):
         """Reassigns accounts for :attr:`ref` and all exceptions.
