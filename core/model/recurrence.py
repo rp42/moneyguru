@@ -5,7 +5,6 @@
 # http://www.gnu.org/licenses/gpl-3.0.html
 
 from calendar import monthrange
-from itertools import chain
 
 from core.util import first
 from core.trans import tr
@@ -87,12 +86,6 @@ class Recurrence:
     def __repr__(self):
         return '<Recurrence %s %d>' % (self.repeat_type, self.repeat_every)
 
-    # --- Private
-    def _all_exceptions(self):
-        exceptions = chain(
-            self._inner.date2exception.values(), self._inner.date2globalchange.values())
-        return (e for e in exceptions if e is not None)
-
     # --- Public
     def add_exception(self, date, txn):
         self._inner.add_exception(date, txn)
@@ -101,17 +94,7 @@ class Recurrence:
         self._inner.add_global_change(date, txn)
 
     def affected_accounts(self):
-        """Returns a set of all :class:`.Account` affected by the schedule.
-
-        This is pretty much the same as calling
-        :meth:`~core.model.transaction.Transaction.affected_accounts` on :attr:`ref`, except that it
-        also checks in exception instances to make there there isn't another affected account in
-        there.
-        """
-        result = self._inner.ref.affected_accounts()
-        for exception in self._all_exceptions():
-            result |= exception.affected_accounts()
-        return result
+        return self._inner.affected_accounts()
 
     def change(self, **kwargs):
         return self._inner.change(**kwargs)
@@ -128,16 +111,8 @@ class Recurrence:
     def get_spawns(self, end):
         return self._inner.get_spawns(end)
 
-    def reassign_account(self, account, reassign_to=None):
-        """Reassigns accounts for :attr:`ref` and all exceptions.
-
-        .. seealso:: :meth:`affected_accounts`
-                     :meth:`~core.model.transaction.Transaction.reassign_account`
-        """
-        self._inner.ref.reassign_account(account, reassign_to)
-        for exception in self._all_exceptions():
-            exception.reassign_account(account, reassign_to)
-        self.reset_spawn_cache()
+    def reassign_account(self, *args):
+        self._inner.reassign_account(*args)
 
     def replicate(self):
         import copy

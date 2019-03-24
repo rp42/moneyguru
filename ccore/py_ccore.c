@@ -1549,7 +1549,7 @@ PyTransaction_amount_for_account(PyTransaction *self, PyObject *args)
 }
 
 static PyObject *
-PyTransaction_affected_accounts(PyTransaction *self, PyObject *args)
+PyTransaction_affected_accounts(PyTransaction *self)
 {
     Account **accounts = transaction_affected_accounts(self->txn);
     PyObject *res = PySet_New(NULL);
@@ -3092,6 +3092,59 @@ PyRecurrence_change_globally(PyRecurrence *self, PyTransaction *spawn)
 }
 
 static PyObject *
+PyRecurrence_affected_accounts(PyRecurrence *self)
+{
+    PyObject *res = PyTransaction_affected_accounts(self->ref);
+    PyObject *value;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(self->date2exception, &pos, NULL, &value)) {
+        if (value == Py_None) {
+            continue;
+        }
+        PyObject *affected = PyTransaction_affected_accounts((PyTransaction *)value);
+        Py_DECREF(PyNumber_InPlaceOr(res, affected));
+    }
+    pos = 0;
+    while (PyDict_Next(self->date2globalchange, &pos, NULL, &value)) {
+        if (value == Py_None) {
+            continue;
+        }
+        PyObject *affected = PyTransaction_affected_accounts((PyTransaction *)value);
+        Py_DECREF(PyNumber_InPlaceOr(res, affected));
+    }
+    PyRecurrence_reset_spawn_cache(self);
+    return res;
+}
+
+static PyObject *
+PyRecurrence_reassign_account(PyRecurrence *self, PyObject *args)
+{
+    if (PyTransaction_reassign_account(self->ref, args) == NULL) {
+        return NULL;
+    }
+    PyObject *value;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(self->date2exception, &pos, NULL, &value)) {
+        if (value == Py_None) {
+            continue;
+        }
+        if (PyTransaction_reassign_account((PyTransaction *)value, args) == NULL) {
+            return NULL;
+        }
+    }
+    pos = 0;
+    while (PyDict_Next(self->date2globalchange, &pos, NULL, &value)) {
+        if (value == Py_None) {
+            continue;
+        }
+        if (PyTransaction_reassign_account((PyTransaction *)value, args) == NULL) {
+            return NULL;
+        }
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *
 PyRecurrence_start_date(PyRecurrence *self)
 {
     return PyTransaction_date(self->ref);
@@ -4008,14 +4061,16 @@ PyType_Spec TransactionList_Type_Spec = {
 };
 
 static PyMethodDef PyRecurrence_methods[] = {
-    {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
     {"add_exception", (PyCFunction)PyRecurrence_add_exception, METH_VARARGS, ""},
     {"add_global_change", (PyCFunction)PyRecurrence_add_global_change, METH_VARARGS, ""},
+    {"affected_accounts", (PyCFunction)PyRecurrence_affected_accounts, METH_NOARGS, ""},
+    {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
     {"change_globally", (PyCFunction)PyRecurrence_change_globally, METH_O, ""},
     {"contains_ref", (PyCFunction)PyRecurrence_contains_ref, METH_O, ""},
     {"delete_at", (PyCFunction)PyRecurrence_delete_at, METH_O, ""},
     {"get_spawns", (PyCFunction)PyRecurrence_get_spawns, METH_O, ""},
     {"replicate", (PyCFunction)PyRecurrence_replicate, METH_NOARGS, ""},
+    {"reassign_account", (PyCFunction)PyRecurrence_reassign_account, METH_VARARGS, ""},
     {"reset_exceptions", (PyCFunction)PyRecurrence_reset_exceptions, METH_NOARGS, ""},
     {"reset_spawn_cache", (PyCFunction)PyRecurrence_reset_spawn_cache, METH_NOARGS, ""},
     {0, 0, 0, 0},
