@@ -18,8 +18,6 @@ from .date import RepeatType
 def find_schedule_of_ref(ref, schedules):
     return first(s for s in schedules if s.contains_ref(ref))
 
-ONE_DAY = datetime.timedelta(1)
-
 def get_repeat_type_desc(repeat_type, start_date):
     res = {
         RepeatType.Daily: tr('Daily'),
@@ -99,10 +97,9 @@ class DateCounter:
         return new_date
 
 
-def Spawn(recurrence, ref, recurrence_date, date=None, txntype=2):
-    date = date or recurrence_date
+def _Spawn(ref, recurrence_date, date):
     res = Transaction(
-        txntype, date, ref.description, ref.payee, ref.checkno, None, None)
+        2, date, ref.description, ref.payee, ref.checkno, None, None)
     #: ``datetime.date``. Date at which the spawn is "supposed to happen", which can be
     #: overridden by the ``date`` argument, if we're in an "exception" situation. We need to
     #: keep track of this date because it's used as a kind of ID (oh, the spawn
@@ -180,9 +177,6 @@ class Recurrence:
         exceptions = chain(self.date2exception.values(), self.date2globalchange.values())
         return (e for e in exceptions if e is not None)
 
-    def _create_spawn(self, ref, date):
-        return Spawn(self, ref, date)
-
     def _update_ref(self):
         # Go through our recurrence dates and see if we should either move our start date due to
         # deleted spawns or to update or ref transaction due to a global change that end up being
@@ -201,6 +195,14 @@ class Recurrence:
         self.reset_spawn_cache()
 
     # --- Public
+    def add_exception(self, date, txn):
+        spawn = _Spawn(txn, date, txn.date)
+        self.date2exception[date] = spawn
+
+    def add_global_change(self, date, txn):
+        spawn = _Spawn(txn, date, txn.date)
+        self.date2globalchange[date] = spawn
+
     def affected_accounts(self):
         """Returns a set of all :class:`.Account` affected by the schedule.
 
@@ -213,6 +215,15 @@ class Recurrence:
         for exception in self._all_exceptions():
             result |= exception.affected_accounts()
         return result
+
+    def change(self, start_date=None, repeat_type=None, repeat_every=None):
+        if start_date is not None and start_date != self.ref.date:
+            self.ref.date = start_date
+        if repeat_type is not None and repeat_type != self._repeat_type:
+            self._repeat_type = repeat_type
+        if repeat_every is not None and repeat_every != self._repeat_every:
+            self._repeat_every = repeat_every
+        self.reset_exceptions()
 
     def change_globally(self, spawn):
         """Add a user-modified spawn into the global exceptions list.
@@ -238,14 +249,6 @@ class Recurrence:
         if ref in self.date2instances.values():
             return True
         return False
-
-    def delete(self, spawn):
-        """Create an exception that prevents ``spawn`` from spawning again.
-
-        :param spawn: The spawn to delete.
-        :type spawn: :class:`Spawn`
-        """
-        self.delete_at(spawn.recurrence_date)
 
     def delete_at(self, date):
         """Create an exception that prevents further spawn at ``date``."""
@@ -291,7 +294,7 @@ class Recurrence:
                     result.append(exception)
             else:
                 if current_date not in self.date2instances:
-                    spawn = self._create_spawn(current_ref, current_date)
+                    spawn = _Spawn(current_ref, current_date, current_date)
                     if global_date_delta:
                         # Only muck with spawn.date if we have a delta. otherwise we're breaking
                         # budgets.
@@ -329,14 +332,6 @@ class Recurrence:
         """Empties :attr:`date2instances`."""
         self.date2instances = {}
 
-    def stop_at(self, spawn):
-        """Stop further spawning at ``spawn`` (sets :attr:`stop_date`)."""
-        self.stop_date = spawn.recurrence_date
-
-    def stop_before(self, spawn):
-        """Stop further spawning just before ``spawn`` (sets :attr:`stop_date`)."""
-        self.stop_date = spawn.recurrence_date - ONE_DAY
-
     # --- Properties
     @property
     def is_alive(self):
@@ -350,24 +345,10 @@ class Recurrence:
         """``int``. See :class:`DateCounter`."""
         return self._repeat_every
 
-    @repeat_every.setter
-    def repeat_every(self, value):
-        if value == self._repeat_every:
-            return
-        self._repeat_every = value
-        self.reset_exceptions()
-
     @property
     def repeat_type(self):
         """:class:`RepeatType`. See :class:`DateCounter`."""
         return self._repeat_type
-
-    @repeat_type.setter
-    def repeat_type(self, value):
-        if value == self._repeat_type:
-            return
-        self._repeat_type = value
-        self.reset_exceptions()
 
     @property
     def start_date(self):
@@ -376,11 +357,3 @@ class Recurrence:
         Same as the :attr:`Transaction.date` attribute of :attr:`ref`.
         """
         return self.ref.date
-
-    @start_date.setter
-    def start_date(self, value):
-        if value == self.ref.date:
-            return
-        self.ref.date = value
-        self.reset_exceptions()
-

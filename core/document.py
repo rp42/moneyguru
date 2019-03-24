@@ -125,7 +125,7 @@ class Document(GUIObject):
             if global_scope:
                 schedule.change_globally(transaction)
             else:
-                schedule.delete(transaction)
+                schedule.delete_at(transaction.recurrence_date)
                 materialized = transaction.materialize()
                 self.transactions.add(materialized)
         else:
@@ -171,7 +171,7 @@ class Document(GUIObject):
         # returns a reference to the corresponding materialized split
         schedule = find_schedule_of_ref(entry.transaction.ref, self.schedules)
         assert schedule is not None
-        schedule.delete(entry.transaction)
+        schedule.delete_at(entry.transaction.recurrence_date)
         materialized = entry.transaction.materialize()
         self.transactions.add(materialized)
         split_index = entry.transaction.splits.index(entry.split)
@@ -420,9 +420,9 @@ class Document(GUIObject):
                 schedule = find_schedule_of_ref(txn.ref, self.schedules)
                 assert schedule is not None
                 if global_scope:
-                    schedule.stop_before(txn)
+                    schedule.stop_date = txn.recurrence_date - datetime.timedelta(1)
                 else:
-                    schedule.delete(txn)
+                    schedule.delete_at(txn.recurrence_date)
             else:
                 self.transactions.remove(txn)
         min_date = min(t.date for t in transactions)
@@ -450,7 +450,7 @@ class Document(GUIObject):
         assert schedule is not None
         action = Action(tr('Materialize transaction'))
         action.change_schedule(schedule)
-        schedule.delete(spawn)
+        schedule.delete_at(spawn.recurrence_date)
         materialized = spawn.materialize()
         action.added_transactions |= {materialized}
         self._undoer.record(action)
@@ -595,9 +595,10 @@ class Document(GUIObject):
             description=new_ref.description, payee=new_ref.payee,
             checkno=new_ref.checkno, notes=new_ref.notes, splits=new_ref.splits
         )
-        schedule.start_date = new_ref.date
-        schedule.repeat_type = repeat_type
-        schedule.repeat_every = repeat_every
+        schedule.change(
+            start_date=new_ref.date,
+            repeat_type=repeat_type,
+            repeat_every=repeat_every)
         schedule.stop_date = stop_date
         schedule.reset_spawn_cache()
         if schedule not in self.schedules:

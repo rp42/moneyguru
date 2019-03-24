@@ -61,7 +61,7 @@ class WithScheduleMixIn:
         parsed = self.app.parse_date(value)
         if parsed == self.schedule.start_date:
             return
-        self.schedule.start_date = parsed
+        self.schedule.change(start_date=parsed)
         self._refresh_repeat_types()
 
     @property
@@ -71,7 +71,7 @@ class WithScheduleMixIn:
     @repeat_every.setter
     def repeat_every(self, value):
         value = max(1, value)
-        self.schedule.repeat_every = value
+        self.schedule.change(repeat_every=value)
         self.view.refresh_repeat_every()
 
     @property
@@ -89,7 +89,7 @@ class WithScheduleMixIn:
     def repeat_type(self, value):
         if value == self.schedule.repeat_type:
             return
-        self.schedule.repeat_type = value
+        self.schedule.change(repeat_type=value)
         self.view.refresh_repeat_every()
 
     def create_repeat_type_list(self):

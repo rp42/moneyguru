@@ -8,8 +8,8 @@ from core.model._ccore import UndoStep
 from core.util import extract
 
 SPLIT_SWAP_ATTRS = ['account', 'amount', 'reconciliation_date']
-SCHEDULE_SWAP_ATTRS = ['repeat_type', 'repeat_every', 'stop_date', 'date2exception',
-                       'date2globalchange', 'date2instances']
+SCHEDULE_SWAP_ATTRS = [
+    'stop_date', 'date2exception', 'date2globalchange', 'date2instances']
 
 def swapvalues(first, second, attrs):
     for attr in attrs:
@@ -103,6 +103,11 @@ class Undoer:
 
     def _do_changes(self, action):
         for schedule, old in action.changed_schedules.items():
+            repeat_type = old.repeat_type
+            repeat_every = old.repeat_every
+            old.change(
+                repeat_type=schedule.repeat_type, repeat_every=schedule.repeat_every)
+            schedule.change(repeat_type=repeat_type, repeat_every=repeat_every)
             swapvalues(schedule, old, SCHEDULE_SWAP_ATTRS)
             newold = schedule.ref.replicate()
             schedule.ref.copy_from(old.ref)

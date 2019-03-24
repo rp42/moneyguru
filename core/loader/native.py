@@ -12,7 +12,7 @@ from core.util import tryint
 from ..exception import FileFormatError
 from ..model._ccore import Transaction
 from ..model.oven import Oven
-from ..model.recurrence import Recurrence, Spawn
+from ..model.recurrence import Recurrence
 from . import base
 
 
@@ -140,8 +140,7 @@ class Loader(base.Loader):
                     txn_element = exception_element.find('transaction')
                     exception = read_transaction_element(txn_element) if txn_element is not None else None
                     if exception:
-                        spawn = Spawn(recurrence, exception, date, exception.date)
-                        recurrence.date2exception[date] = spawn
+                        recurrence.add_exception(date, exception)
                     else:
                         recurrence.delete_at(date)
                 except KeyError:
@@ -151,8 +150,7 @@ class Loader(base.Loader):
                     date = str2date(change_element.attrib['date'])
                     txn_element = change_element.find('transaction')
                     change = read_transaction_element(txn_element) if txn_element is not None else None
-                    spawn = Spawn(recurrence, change, date, change.date)
-                    recurrence.date2globalchange[date] = spawn
+                    recurrence.add_global_change(date, change)
                 except KeyError:
                     continue
             self.schedules.append(recurrence)
