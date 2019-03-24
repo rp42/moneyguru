@@ -7,6 +7,7 @@
 import os.path as op
 import xml.etree.cElementTree as ET
 
+from ..model.date import RepeatType
 from ..model._ccore import amount_format
 from core.util import remove_invalid_xml, ensure_folder
 
@@ -75,7 +76,7 @@ def save(filename, document_id, properties, accounts, transactions, schedules):
     for recurrence in scheduled:
         recurrence_element = ET.SubElement(root, 'recurrence')
         attrib = recurrence_element.attrib
-        attrib['type'] = recurrence.repeat_type
+        attrib['type'] = RepeatType.to_str(recurrence.repeat_type)
         attrib['every'] = str(recurrence.repeat_every)
         if recurrence.stop_date is not None:
             attrib['stop_date'] = date2str(recurrence.stop_date)

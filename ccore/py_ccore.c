@@ -2792,6 +2792,21 @@ PyRecurrence_dealloc(PyRecurrence *self)
 }
 
 static PyObject*
+PyRecurrence_reset_exceptions(PyRecurrence *self)
+{
+    PyDict_Clear(self->date2exception);
+    PyDict_Clear(self->date2globalchange);
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+PyRecurrence_reset_spawn_cache(PyRecurrence *self)
+{
+    PyDict_Clear(self->date2instances);
+    Py_RETURN_NONE;
+}
+
+static PyObject*
 PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
 {
     PyObject *start_date = NULL;
@@ -2808,34 +2823,27 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
     }
 
     if (start_date != NULL) {
+        time_t old = self->ref->txn->date;
         PyTransaction_date_set(self->ref, start_date);
+        if (self->ref->txn->date != old) {
+            PyRecurrence_reset_exceptions(self);
+        }
     }
     if (stop_date != NULL) {
         self->recurrence.stop = pydate2time(stop_date);
     }
-    if (repeat_type >= 1) {
+    if ((repeat_type >= 1) && ((RepeatType)repeat_type != self->recurrence.type)) {
         self->recurrence.type = repeat_type;
+        PyRecurrence_reset_exceptions(self);
     }
-    if (repeat_every >= 1) {
+    if ((repeat_every >= 1) && (repeat_every != self->recurrence.every)) {
         self->recurrence.every = repeat_every;
+        PyRecurrence_reset_exceptions(self);
     }
+    PyRecurrence_reset_spawn_cache(self);
     Py_RETURN_NONE;
 }
 
-static PyObject*
-PyRecurrence_reset_exceptions(PyRecurrence *self, PyObject *args)
-{
-    PyDict_Clear(self->date2exception);
-    PyDict_Clear(self->date2globalchange);
-    Py_RETURN_NONE;
-}
-
-static PyObject*
-PyRecurrence_reset_spawn_cache(PyRecurrence *self, PyObject *args)
-{
-    PyDict_Clear(self->date2instances);
-    Py_RETURN_NONE;
-}
 
 static PyObject *
 PyRecurrence_start_date(PyRecurrence *self)
@@ -2960,10 +2968,10 @@ static PyObject*
 py_inc_date(PyObject *self, PyObject *args)
 {
     PyObject *date_py;
-    char *type;
+    int type;
     int count;
 
-    if (!PyArg_ParseTuple(args, "Osi", &date_py, &type, &count)) {
+    if (!PyArg_ParseTuple(args, "Oii", &date_py, &type, &count)) {
         return NULL;
     }
     time_t date = pydate2time(date_py);
@@ -2971,18 +2979,8 @@ py_inc_date(PyObject *self, PyObject *args)
         return NULL;
     }
     RepeatType rt;
-    if (strcmp(type, "daily") == 0) {
-        rt = REPEAT_DAILY;
-    } else if (strcmp(type, "weekly") == 0) {
-        rt = REPEAT_WEEKLY;
-    } else if (strcmp(type, "monthly") == 0) {
-        rt = REPEAT_MONTHLY;
-    } else if (strcmp(type, "yearly") == 0) {
-        rt = REPEAT_YEARLY;
-    } else if (strcmp(type, "weekday") == 0) {
-        rt = REPEAT_WEEKDAY;
-    } else if (strcmp(type, "weekday_last") == 0) {
-        rt = REPEAT_WEEKDAY_LAST;
+    if ((type >= REPEAT_DAILY) && (type <= REPEAT_WEEKDAY_LAST)) {
+        rt = type;
     } else {
         PyErr_SetString(PyExc_ValueError, "invalid type");
         return NULL;

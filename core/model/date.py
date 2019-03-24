@@ -431,30 +431,30 @@ class CustomDateRange(DateRange):
 # --- Date Incrementing
 
 class RepeatType:
-    """Available repetition types for :class:`Recurrence`.
-
-    * ``Daily``
-    * ``Weekly``
-    * ``Monthly``
-    * ``Yearly``
-    * ``Weekday`` (every 2nd friday of the month)
-    * ``WeekdayLast`` (every last friday of the month)
-    """
-    Daily = 'daily'
-    Weekly = 'weekly'
-    Monthly = 'monthly'
-    Yearly = 'yearly'
-    Weekday = 'weekday'
-    WeekdayLast = 'weekday_last'
+    # Mirror of RepeatType enum is ccore
+    Daily = 1
+    Weekly = 2
+    Monthly = 3
+    Yearly = 4
+    Weekday = 5
+    WeekdayLast = 6
     ALL = [Daily, Weekly, Monthly, Yearly, Weekday, WeekdayLast]
+    # used for serialization
+    AS_STR = ['daily', 'weekly', 'monthly', 'yearly', 'weekday', 'weekday_last']
 
     @classmethod
-    def to_int(cls, s):
-        return cls.ALL.index(s) + 1
+    def to_str(cls, i):
+        try:
+            return cls.AS_STR[i-1]
+        except IndexError:
+            return 'monthly'
 
     @classmethod
-    def from_int(cls, i):
-        return cls.ALL[i-1]
+    def from_str(cls, s):
+        try:
+            return cls.AS_STR.index(s) + 1
+        except ValueError:
+            return cls.Monthly
 
 
 # --- Date Formatting

@@ -11,6 +11,7 @@ from core.util import tryint
 
 from ..exception import FileFormatError
 from ..model._ccore import Transaction
+from ..model.date import RepeatType
 from ..model.oven import Oven
 from ..model.recurrence import Recurrence
 from . import base
@@ -130,7 +131,7 @@ class Loader(base.Loader):
         for recurrence_element in root.iter('recurrence'):
             attrib = recurrence_element.attrib
             ref = read_transaction_element(recurrence_element.find('transaction'))
-            repeat_type = attrib.get('type')
+            repeat_type = RepeatType.from_str(attrib.get('type'))
             repeat_every = int(attrib.get('every', '1'))
             recurrence = Recurrence(ref, repeat_type, repeat_every)
             recurrence.change(stop_date=str2date(attrib.get('stop_date')))

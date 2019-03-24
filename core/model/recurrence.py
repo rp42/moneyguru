@@ -155,8 +155,7 @@ class Recurrence:
         if repeat_type not in RepeatType.ALL:
             # invalid repeat type, default to monthly
             repeat_type = RepeatType.Monthly
-        self._inner = _Recurrence(
-            ref, RepeatType.to_int(repeat_type), repeat_every)
+        self._inner = _Recurrence(ref, repeat_type, repeat_every)
 
     def __repr__(self):
         return '<Recurrence %s %d>' % (self.repeat_type, self.repeat_every)
@@ -178,7 +177,7 @@ class Recurrence:
             if d in self._inner.date2globalchange:
                 self._inner.ref = self._inner.date2globalchange[d].replicate()
             else:
-                self._inner.change(start_date=d)
+                self._inner.ref.date = d
             break
         date2exception = {d: ex for d, ex in self._inner.date2exception.items() if d > self.start_date}
         self._inner.date2exception.clear()
@@ -211,10 +210,7 @@ class Recurrence:
         return result
 
     def change(self, **kwargs):
-        if 'repeat_type' in kwargs:
-            kwargs['repeat_type'] = RepeatType.to_int(kwargs['repeat_type'])
-        self._inner.change(**kwargs)
-        self.reset_exceptions()
+        return self._inner.change(**kwargs)
 
     def change_globally(self, spawn):
         """Add a user-modified spawn into the global exceptions list.
@@ -336,7 +332,7 @@ class Recurrence:
     @property
     def repeat_type(self):
         """:class:`RepeatType`. See :class:`DateCounter`."""
-        return RepeatType.from_int(self._inner.repeat_type)
+        return self._inner.repeat_type
 
     @property
     def start_date(self):
