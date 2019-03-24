@@ -10,7 +10,7 @@ from itertools import chain
 from core.util import first
 from core.trans import tr
 
-from ._ccore import Transaction, Recurrence as _Recurrence
+from ._ccore import Recurrence as _Recurrence
 from .date import RepeatType
 
 def find_schedule_of_ref(ref, schedules):
@@ -39,24 +39,6 @@ def get_repeat_type_desc(repeat_type, start_date):
             return tr('Every last %s of the month') % weekday_name
         else:
             return ''
-
-
-def _Spawn(ref, recurrence_date, date):
-    res = Transaction(
-        2, date, ref.description, ref.payee, ref.checkno, None, None)
-    #: ``datetime.date``. Date at which the spawn is "supposed to happen", which can be
-    #: overridden by the ``date`` argument, if we're in an "exception" situation. We need to
-    #: keep track of this date because it's used as a kind of ID (oh, the spawn
-    #: ``schedule42@03-04-2014``? Yeah, there's an exception for that one) in the save file.
-    res.recurrence_date = recurrence_date
-    #: :class:`.Transaction`. Template transaction for our spawn. Most of the time, it's the
-    #: same as :attr:`Recurrence.ref`, unless we have an "exception" in our schedule.
-    res.ref = ref
-    res.change(splits=ref.splits)
-    for split in res.splits:
-        split.reconciliation_date = None
-    res.balance()
-    return res
 
 
 class Recurrence:
@@ -113,12 +95,10 @@ class Recurrence:
 
     # --- Public
     def add_exception(self, date, txn):
-        spawn = _Spawn(txn, date, txn.date)
-        self._inner.date2exception[date] = spawn
+        self._inner.add_exception(date, txn)
 
     def add_global_change(self, date, txn):
-        spawn = _Spawn(txn, date, txn.date)
-        self._inner.date2globalchange[date] = spawn
+        self._inner.add_global_change(date, txn)
 
     def affected_accounts(self):
         """Returns a set of all :class:`.Account` affected by the schedule.

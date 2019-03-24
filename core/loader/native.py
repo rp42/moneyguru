@@ -66,7 +66,7 @@ class Loader(base.Loader):
             description = attrib.get('description')
             payee = attrib.get('payee')
             checkno = attrib.get('checkno')
-            txn = Transaction(1, date, description, payee, checkno, None, None)
+            txn = Transaction(date, description, payee, checkno, None, None)
             txn.notes = handle_newlines(attrib.get('notes')) or ''
             try:
                 txn.mtime = int(attrib.get('mtime', 0))

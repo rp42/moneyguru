@@ -79,4 +79,4 @@ def splitted_splits(splits):
     return froms, tos
 
 def Transaction(date, description=None, payee=None, checkno=None, account=None, amount=None):
-    return _Transaction(1, date, description, payee, checkno, account, amount)
+    return _Transaction(date, description, payee, checkno, account, amount)

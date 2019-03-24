@@ -231,7 +231,7 @@ class TransactionInfo:
         account = amount = None
         if self.account:
             account, amount = process_split(accounts, self.account, self.amount, self.currency)
-        transaction = Transaction(1, date, description, payee, checkno, account, amount)
+        transaction = Transaction(date, description, payee, checkno, account, amount)
         for str_account, str_amount, memo in self.splits:
             account, amount = process_split(
                 accounts, str_account, str_amount, None)

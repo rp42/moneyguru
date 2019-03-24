@@ -1922,13 +1922,12 @@ static int
 PyTransaction_init(PyTransaction *self, PyObject *args, PyObject *kwds)
 {
     PyObject *date_p, *description, *payee, *checkno, *account_p, *amount_p;
-    int txntype;
 
-    static char *kwlist[] = {"type", "date", "description", "payee", "checkno",
+    static char *kwlist[] = {"date", "description", "payee", "checkno",
         "account", "amount", NULL};
 
     int res = PyArg_ParseTupleAndKeywords(
-        args, kwds, "iOOOOOO", kwlist, &txntype, &date_p, &description, &payee,
+        args, kwds, "OOOOOO", kwlist, &date_p, &description, &payee,
         &checkno, &account_p, &amount_p);
     if (!res) {
         return -1;
@@ -1940,7 +1939,7 @@ PyTransaction_init(PyTransaction *self, PyObject *args, PyObject *kwds)
     }
     self->txn = malloc(sizeof(Transaction));
     self->owned = true;
-    transaction_init(self->txn, txntype, date);
+    transaction_init(self->txn, TXN_TYPE_NORMAL, date);
     PyTransaction_description_set(self, description);
     PyTransaction_payee_set(self, payee);
     PyTransaction_checkno_set(self, checkno);
@@ -2900,6 +2899,17 @@ PyRecurrence_update_ref(PyRecurrence *self)
     Py_RETURN_NONE;
 }
 
+static PyTransaction*
+_PyRecurrence_spawn(PyTransaction *ref, time_t recurrence_date, time_t date)
+{
+    PyTransaction *spawn = (PyTransaction *)PyTransaction_replicate(ref);
+    spawn->txn->type = TXN_TYPE_RECURRENCE;
+    spawn->txn->date = date;
+    spawn->txn->recurrence_date = recurrence_date;
+    spawn->txn->ref = ref->txn;
+    return spawn;
+}
+
 /* Returns the list of transactions spawned by our recurrence.
  *
  * We start at :attr:`start_date` and end at ``end``. We have to specify an end
@@ -2966,11 +2976,7 @@ PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
             txn = PyDict_GetItem(self->date2instances, date_py);
             if (txn == NULL) {
                 time_t spawn_date = date + global_date_delta;
-                PyTransaction *spawn = (PyTransaction *)PyTransaction_replicate(current_ref);
-                spawn->txn->type = TXN_TYPE_RECURRENCE;
-                spawn->txn->date = spawn_date;
-                spawn->txn->recurrence_date = date;
-                spawn->txn->ref = current_ref->txn;
+                PyTransaction *spawn = _PyRecurrence_spawn(current_ref, date, spawn_date);
                 txn = (PyObject *)spawn;
                 PyDict_SetItem(self->date2instances, date_py, txn);
             }
@@ -2979,6 +2985,36 @@ PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
         Py_DECREF(date_py);
     }
     return spawns;
+}
+
+static PyObject*
+PyRecurrence_add_exception(PyRecurrence *self, PyObject *args)
+{
+    PyObject *date_py;
+    PyTransaction *txn;
+
+    if (!PyArg_ParseTuple(args, "OO", &date_py, &txn)) {
+        return NULL;
+    }
+    time_t date = pydate2time(date_py);
+    PyTransaction *spawn = _PyRecurrence_spawn(txn, date, txn->txn->date);
+    PyDict_SetItem(self->date2exception, date_py, (PyObject *)spawn);
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+PyRecurrence_add_global_change(PyRecurrence *self, PyObject *args)
+{
+    PyObject *date_py;
+    PyTransaction *txn;
+
+    if (!PyArg_ParseTuple(args, "OO", &date_py, &txn)) {
+        return NULL;
+    }
+    time_t date = pydate2time(date_py);
+    PyTransaction *spawn = _PyRecurrence_spawn(txn, date, txn->txn->date);
+    PyDict_SetItem(self->date2globalchange, date_py, (PyObject *)spawn);
+    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -3907,6 +3943,8 @@ PyType_Spec TransactionList_Type_Spec = {
 
 static PyMethodDef PyRecurrence_methods[] = {
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
+    {"add_exception", (PyCFunction)PyRecurrence_add_exception, METH_VARARGS, ""},
+    {"add_global_change", (PyCFunction)PyRecurrence_add_global_change, METH_VARARGS, ""},
     {"get_spawns", (PyCFunction)PyRecurrence_get_spawns, METH_O, ""},
     {"reset_exceptions", (PyCFunction)PyRecurrence_reset_exceptions, METH_NOARGS, ""},
     {"reset_spawn_cache", (PyCFunction)PyRecurrence_reset_spawn_cache, METH_NOARGS, ""},
