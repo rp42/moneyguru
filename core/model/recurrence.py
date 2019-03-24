@@ -166,27 +166,6 @@ class Recurrence:
             self._inner.date2exception.values(), self._inner.date2globalchange.values())
         return (e for e in exceptions if e is not None)
 
-    def _update_ref(self):
-        # Go through our recurrence dates and see if we should either move our start date due to
-        # deleted spawns or to update or ref transaction due to a global change that end up being
-        # on our first recurrence date.
-        date_counter = DateCounter(self.start_date, self.repeat_type, self.repeat_every, datetime.date.max)
-        for d in date_counter:
-            if d in self._inner.date2exception and self._inner.date2exception[d] is None:
-                continue
-            if d in self._inner.date2globalchange:
-                self._inner.ref = self._inner.date2globalchange[d].replicate()
-            else:
-                self._inner.ref.date = d
-            break
-        date2exception = {d: ex for d, ex in self._inner.date2exception.items() if d > self.start_date}
-        self._inner.date2exception.clear()
-        self._inner.date2exception.update(date2exception)
-        date2globalchange = {d: ex for d, ex in self._inner.date2globalchange.items() if d > self.start_date}
-        self._inner.date2globalchange.clear()
-        self._inner.date2globalchange.update(date2globalchange)
-        self.reset_spawn_cache()
-
     # --- Public
     def add_exception(self, date, txn):
         spawn = _Spawn(txn, date, txn.date)
@@ -226,7 +205,7 @@ class Recurrence:
             if exception is not None and date >= spawn.recurrence_date:
                 del self._inner.date2exception[date]
         self._inner.date2globalchange[spawn.recurrence_date] = spawn
-        self._update_ref()
+        self._inner.update_ref()
 
     def contains_ref(self, ref):
         if self._inner.ref == ref:
@@ -240,7 +219,7 @@ class Recurrence:
     def delete_at(self, date):
         """Create an exception that prevents further spawn at ``date``."""
         self._inner.date2exception[date] = None
-        self._update_ref()
+        self._inner.update_ref()
 
     def get_spawns(self, end):
         """Returns the list of transactions spawned by our recurrence.

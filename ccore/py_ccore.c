@@ -2844,6 +2844,61 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
     Py_RETURN_NONE;
 }
 
+static PyObject*
+PyRecurrence_update_ref(PyRecurrence *self)
+{
+    /* Go through our recurrence dates and see if we should either move our
+     * start date due to deleted spawns or to update or ref transaction due to
+     * a global change that end up being on our first recurrence date.
+     */
+    time_t date = self->ref->txn->date;
+    while (true) {
+        PyObject *date_py = time2pydate(date);
+        PyObject *exception = PyDict_GetItem(self->date2exception, date_py);
+        Py_DECREF(date_py);
+        if (exception != Py_None) {
+            // Not a deleted spawn? we're finished with our loop
+            break;
+        }
+        // We have a deleted spawn. We'll advance our start date
+        date = inc_date(date, self->recurrence.type, self->recurrence.every);
+    }
+    PyObject *date_py = time2pydate(date);
+    PyObject *newref = PyDict_GetItem(self->date2globalchange, date_py);
+    if (newref != NULL) {
+        // We have a global change matching. this is our new ref
+        Py_DECREF(self->ref);
+        self->ref = (PyTransaction *)newref;
+        Py_INCREF(self->ref);
+        PyDict_DelItem(self->date2globalchange, date_py);
+    } else {
+        // we just need to advance our new date
+        self->ref->txn->date = date;
+    }
+    Py_DECREF(date_py);
+
+    // Now, let's clear our dicts from old stuff.
+    PyObject *keys = PyDict_Keys(self->date2exception);
+    for (Py_ssize_t i=0; i<PyList_Size(keys); i++) {
+        PyObject *py = PyList_GET_ITEM(keys, i);
+        time_t d = pydate2time(py);
+        if (d <= date) {
+            PyDict_DelItem(self->date2exception, py);
+        }
+    }
+    Py_DECREF(keys);
+    keys = PyDict_Keys(self->date2globalchange);
+    for (Py_ssize_t i=0; i<PyList_Size(keys); i++) {
+        PyObject *py = PyList_GET_ITEM(keys, i);
+        time_t d = pydate2time(py);
+        if (d <= date) {
+            PyDict_DelItem(self->date2globalchange, py);
+        }
+    }
+    Py_DECREF(keys);
+    PyRecurrence_reset_spawn_cache(self);
+    Py_RETURN_NONE;
+}
 
 static PyObject *
 PyRecurrence_start_date(PyRecurrence *self)
@@ -3773,6 +3828,7 @@ static PyMethodDef PyRecurrence_methods[] = {
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
     {"reset_exceptions", (PyCFunction)PyRecurrence_reset_exceptions, METH_NOARGS, ""},
     {"reset_spawn_cache", (PyCFunction)PyRecurrence_reset_spawn_cache, METH_NOARGS, ""},
+    {"update_ref", (PyCFunction)PyRecurrence_update_ref, METH_NOARGS, ""},
     {0, 0, 0, 0},
 };
 
