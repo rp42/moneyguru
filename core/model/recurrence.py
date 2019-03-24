@@ -117,28 +117,13 @@ class Recurrence:
         return self._inner.change(**kwargs)
 
     def change_globally(self, spawn):
-        """Add a user-modified spawn into the global exceptions list.
-
-        :param spawn: The spawn to add to :attr:`date2globalchange`.
-        :type spawn: :class:`.Spawn`
-        """
-        for date in list(self._inner.date2globalchange.keys()):
-            if date >= spawn.recurrence_date:
-                del self._inner.date2globalchange[date]
-        for date, exception in list(self._inner.date2exception.items()):
-            # we don't want to remove local deletions
-            if exception is not None and date >= spawn.recurrence_date:
-                del self._inner.date2exception[date]
-        self._inner.date2globalchange[spawn.recurrence_date] = spawn
-        self._inner.update_ref()
+        self._inner.change_globally(spawn)
 
     def contains_ref(self, ref):
         return self._inner.contains_ref(ref)
 
     def delete_at(self, date):
-        """Create an exception that prevents further spawn at ``date``."""
-        self._inner.date2exception[date] = None
-        self._inner.update_ref()
+        self._inner.delete_at(date)
 
     def get_spawns(self, end):
         return self._inner.get_spawns(end)
@@ -155,12 +140,9 @@ class Recurrence:
         self.reset_spawn_cache()
 
     def replicate(self):
-        """Returns a copy of ``self``."""
-        result = Recurrence(
-            self._inner.ref.replicate(), self.repeat_type, self.repeat_every)
-        result.change(stop_date=self.stop_date)
-        result._inner.date2exception.update(self._inner.date2exception)
-        result._inner.date2globalchange.update(self._inner.date2globalchange)
+        import copy
+        result = copy.copy(self)
+        result._inner = self._inner.replicate()
         return result
 
     def reset_exceptions(self):
@@ -170,13 +152,6 @@ class Recurrence:
         self._inner.reset_spawn_cache()
 
     # --- Properties
-    @property
-    def is_alive(self):
-        """Returns whether :meth:`get_spawns` can ever return anything."""
-        if self.stop_date is None:
-            return True
-        return bool(self.get_spawns(self.stop_date))
-
     @property
     def repeat_every(self):
         """``int``. See :class:`DateCounter`."""

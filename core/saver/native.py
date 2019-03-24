@@ -72,7 +72,12 @@ def save(filename, document_id, properties, accounts, transactions, schedules):
     for transaction in transactions:
         write_transaction_element(root, transaction)
     # the functionality of the line below is untested because it's an optimisation
-    scheduled = [s for s in schedules if s.is_alive]
+    def is_alive(schedule):
+        if schedule.stop_date is None:
+            return True
+        return bool(schedule.get_spawns(schedule.stop_date))
+
+    scheduled = [s for s in schedules if is_alive(s)]
     for recurrence in scheduled:
         recurrence_element = ET.SubElement(root, 'recurrence')
         attrib = recurrence_element.attrib

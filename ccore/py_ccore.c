@@ -2791,6 +2791,20 @@ PyRecurrence_dealloc(PyRecurrence *self)
 }
 
 static PyObject*
+PyRecurrence_replicate(PyRecurrence *self)
+{
+    PyRecurrence *res = (PyRecurrence *)PyType_GenericAlloc((PyTypeObject *)Recurrence_Type, 0);
+    res->ref = (PyTransaction *)PyTransaction_replicate(self->ref);
+    res->recurrence.type = self->recurrence.type;
+    res->recurrence.every = self->recurrence.every;
+    res->recurrence.stop = self->recurrence.stop;
+    res->date2exception = PyDict_Copy(self->date2exception);
+    res->date2globalchange = PyDict_Copy(self->date2globalchange);
+    res->date2instances = PyDict_New();
+    return (PyObject *)res;
+}
+
+static PyObject*
 PyRecurrence_reset_exceptions(PyRecurrence *self)
 {
     PyDict_Clear(self->date2exception);
@@ -3034,6 +3048,47 @@ PyRecurrence_contains_ref(PyRecurrence *self, PyTransaction *ref)
     }
     Py_DECREF(values);
     Py_RETURN_FALSE;
+}
+
+static PyObject*
+PyRecurrence_delete_at(PyRecurrence *self, PyObject *date_py)
+{
+    Py_INCREF(Py_None);
+    PyDict_SetItem(self->date2exception, date_py, Py_None);
+    PyRecurrence_update_ref(self);
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+PyRecurrence_change_globally(PyRecurrence *self, PyTransaction *spawn)
+{
+    time_t rdate = spawn->txn->recurrence_date;
+    PyObject *keys = PyDict_Keys(self->date2exception);
+    for (Py_ssize_t i=0; i<PyList_Size(keys); i++) {
+        PyObject *py = PyList_GET_ITEM(keys, i);
+        time_t d = pydate2time(py);
+        if (d >= rdate) {
+            PyObject *txn = PyDict_GetItem(self->date2exception, py);
+            // we don't want to remove local deletions
+            if (txn != Py_None) {
+                PyDict_DelItem(self->date2exception, py);
+            }
+        }
+    }
+    Py_DECREF(keys);
+    keys = PyDict_Keys(self->date2globalchange);
+    for (Py_ssize_t i=0; i<PyList_Size(keys); i++) {
+        PyObject *py = PyList_GET_ITEM(keys, i);
+        time_t d = pydate2time(py);
+        if (d >= rdate) {
+            PyDict_DelItem(self->date2globalchange, py);
+        }
+    }
+    Py_DECREF(keys);
+    Py_INCREF(spawn);
+    PyDict_SetItem(self->date2globalchange, time2pydate(rdate), (PyObject *)spawn);
+    PyRecurrence_update_ref(self);
+    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -3956,11 +4011,13 @@ static PyMethodDef PyRecurrence_methods[] = {
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
     {"add_exception", (PyCFunction)PyRecurrence_add_exception, METH_VARARGS, ""},
     {"add_global_change", (PyCFunction)PyRecurrence_add_global_change, METH_VARARGS, ""},
+    {"change_globally", (PyCFunction)PyRecurrence_change_globally, METH_O, ""},
     {"contains_ref", (PyCFunction)PyRecurrence_contains_ref, METH_O, ""},
+    {"delete_at", (PyCFunction)PyRecurrence_delete_at, METH_O, ""},
     {"get_spawns", (PyCFunction)PyRecurrence_get_spawns, METH_O, ""},
+    {"replicate", (PyCFunction)PyRecurrence_replicate, METH_NOARGS, ""},
     {"reset_exceptions", (PyCFunction)PyRecurrence_reset_exceptions, METH_NOARGS, ""},
     {"reset_spawn_cache", (PyCFunction)PyRecurrence_reset_spawn_cache, METH_NOARGS, ""},
-    {"update_ref", (PyCFunction)PyRecurrence_update_ref, METH_NOARGS, ""},
     {0, 0, 0, 0},
 };
 
