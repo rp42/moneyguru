@@ -155,7 +155,8 @@ class Recurrence:
         if repeat_type not in RepeatType.ALL:
             # invalid repeat type, default to monthly
             repeat_type = RepeatType.Monthly
-        self._inner = _Recurrence(ref, repeat_type, repeat_every)
+        self._inner = _Recurrence(
+            ref, RepeatType.to_int(repeat_type), repeat_every)
         #: ``recurrent_date -> transaction`` mapping of schedule exceptions.
         self.date2exception = {}
         #: ``recurrent_date -> transaction`` mapping of *global* schedule exceptions.
@@ -211,6 +212,8 @@ class Recurrence:
         return result
 
     def change(self, **kwargs):
+        if 'repeat_type' in kwargs:
+            kwargs['repeat_type'] = RepeatType.to_int(kwargs['repeat_type'])
         self._inner.change(**kwargs)
         self.reset_exceptions()
 
@@ -338,7 +341,7 @@ class Recurrence:
     @property
     def repeat_type(self):
         """:class:`RepeatType`. See :class:`DateCounter`."""
-        return self._inner.repeat_type
+        return RepeatType.from_int(self._inner.repeat_type)
 
     @property
     def start_date(self):

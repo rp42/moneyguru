@@ -121,10 +121,8 @@ static PyObject *TransactionList_Type;
 
 typedef struct {
     PyObject_HEAD
+    Recurrence recurrence;
     PyTransaction *ref;
-    PyObject *stop_date;
-    PyObject *repeat_type;
-    int repeat_every;
 } PyRecurrence;
 
 static PyObject *Recurrence_Type;
@@ -2763,18 +2761,17 @@ PyRecurrence_init(PyRecurrence *self, PyObject *args, PyObject *kwds)
         "ref", "repeat_type", "repeat_every", NULL};
 
     int res = PyArg_ParseTupleAndKeywords(
-        args, kwds, "OOi", kwlist,
+        args, kwds, "Oii", kwlist,
         &self->ref,
-        &self->repeat_type,
-        &self->repeat_every);
+        &self->recurrence.type,
+        &self->recurrence.every);
     if (!res) {
         return -1;
     }
 
     Py_INCREF(self->ref);
-    Py_INCREF(self->repeat_type);
-    self->stop_date = Py_None;
-    Py_INCREF(Py_None);
+    self->recurrence.start = self->ref->txn->date;
+    self->recurrence.stop = 0;
     return 0;
 }
 
@@ -2782,8 +2779,6 @@ static void
 PyRecurrence_dealloc(PyRecurrence *self)
 {
     Py_DECREF(self->ref);
-    Py_DECREF(self->stop_date);
-    Py_DECREF(self->repeat_type);
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -2792,12 +2787,12 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
 {
     PyObject *start_date = NULL;
     PyObject *stop_date = NULL;
-    PyObject *repeat_type = NULL;
+    int repeat_type = -1;
     int repeat_every = -1;
     static char *kwlist[] = {"start_date", "stop_date", "repeat_type",
         "repeat_every", NULL};
 
-    int res = PyArg_ParseTupleAndKeywords(args, kwds, "|OOOi", kwlist,
+    int res = PyArg_ParseTupleAndKeywords(args, kwds, "|OOii", kwlist,
         &start_date, &stop_date, &repeat_type, &repeat_every);
     if (!res) {
         return NULL;
@@ -2807,17 +2802,13 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
         PyTransaction_date_set(self->ref, start_date);
     }
     if (stop_date != NULL) {
-        Py_DECREF(self->stop_date);
-        self->stop_date = stop_date;
-        Py_INCREF(self->stop_date);
+        self->recurrence.stop = pydate2time(stop_date);
     }
-    if (repeat_type != NULL) {
-        Py_DECREF(self->repeat_type);
-        self->repeat_type = repeat_type;
-        Py_INCREF(self->repeat_type);
+    if (repeat_type >= 1) {
+        self->recurrence.type = repeat_type;
     }
-    if (repeat_every > 0) {
-        self->repeat_every = repeat_every;
+    if (repeat_every >= 1) {
+        self->recurrence.every = repeat_every;
     }
     Py_RETURN_NONE;
 }
@@ -2831,21 +2822,19 @@ PyRecurrence_start_date(PyRecurrence *self)
 static PyObject *
 PyRecurrence_stop_date(PyRecurrence *self)
 {
-    Py_INCREF(self->stop_date);
-    return self->stop_date;
+    return time2pydate(self->recurrence.stop);
 }
 
 static PyObject *
 PyRecurrence_repeat_type(PyRecurrence *self)
 {
-    Py_INCREF(self->repeat_type);
-    return self->repeat_type;
+    return PyLong_FromLong(self->recurrence.type);
 }
 
 static PyObject *
 PyRecurrence_repeat_every(PyRecurrence *self)
 {
-    return PyLong_FromLong(self->repeat_every);
+    return PyLong_FromLong(self->recurrence.every);
 }
 
 static PyObject *

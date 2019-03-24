@@ -446,7 +446,16 @@ class RepeatType:
     Yearly = 'yearly'
     Weekday = 'weekday'
     WeekdayLast = 'weekday_last'
-    ALL = {Daily, Weekly, Monthly, Yearly, Weekday, WeekdayLast}
+    ALL = [Daily, Weekly, Monthly, Yearly, Weekday, WeekdayLast]
+
+    @classmethod
+    def to_int(cls, s):
+        return cls.ALL.index(s) + 1
+
+    @classmethod
+    def from_int(cls, i):
+        return cls.ALL[i-1]
+
 
 # --- Date Formatting
 # For the functions below, the format used is a subset of the Unicode format type

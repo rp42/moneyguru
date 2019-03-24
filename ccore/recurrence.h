@@ -3,13 +3,23 @@
 #define SECS_IN_DAY 86400
 
 typedef enum {
-    REPEAT_DAILY,
-    REPEAT_WEEKLY,
-    REPEAT_MONTHLY,
-    REPEAT_YEARLY,
-    REPEAT_WEEKDAY,
-    REPEAT_WEEKDAY_LAST,
+    REPEAT_DAILY = 1,
+    REPEAT_WEEKLY = 2,
+    REPEAT_MONTHLY = 3,
+    REPEAT_YEARLY = 4,
+    REPEAT_WEEKDAY = 5,
+    REPEAT_WEEKDAY_LAST = 6,
 } RepeatType;
+
+typedef struct {
+    // date at which the recurrence starts
+    time_t start;
+    // date at which the recurrence stops. 0 if never.
+    time_t stop;
+    RepeatType type;
+    // Repeats every X units of `type`.
+    int every;
+} Recurrence;
 
 /* Increment `date` by `count` units of `repeat_type`.
  *
