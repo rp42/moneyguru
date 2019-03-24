@@ -133,13 +133,7 @@ class Recurrence:
         self._inner.update_ref()
 
     def contains_ref(self, ref):
-        if self._inner.ref == ref:
-            return True
-        if ref in self._inner.date2globalchange.values():
-            return True
-        if ref in self._inner.date2instances.values():
-            return True
-        return False
+        return self._inner.contains_ref(ref)
 
     def delete_at(self, date):
         """Create an exception that prevents further spawn at ``date``."""

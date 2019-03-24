@@ -3017,6 +3017,25 @@ PyRecurrence_add_global_change(PyRecurrence *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+static PyObject*
+PyRecurrence_contains_ref(PyRecurrence *self, PyTransaction *ref)
+{
+    if (ref->txn == self->ref->txn) {
+        Py_RETURN_TRUE;
+    }
+    PyObject *values = PyDict_Values(self->date2globalchange);
+    if (PySequence_Contains(values, (PyObject *)ref)) {
+        Py_RETURN_TRUE;
+    }
+    Py_DECREF(values);
+    values = PyDict_Values(self->date2instances);
+    if (PySequence_Contains(values, (PyObject *)ref)) {
+        Py_RETURN_TRUE;
+    }
+    Py_DECREF(values);
+    Py_RETURN_FALSE;
+}
+
 static PyObject *
 PyRecurrence_start_date(PyRecurrence *self)
 {
@@ -3070,14 +3089,6 @@ PyRecurrence_date2globalchange(PyRecurrence *self)
     Py_INCREF(self->date2globalchange);
     return (PyObject *)self->date2globalchange;
 }
-
-static PyObject *
-PyRecurrence_date2instances(PyRecurrence *self)
-{
-    Py_INCREF(self->date2instances);
-    return (PyObject *)self->date2instances;
-}
-
 
 /* Oven functions */
 
@@ -3945,6 +3956,7 @@ static PyMethodDef PyRecurrence_methods[] = {
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
     {"add_exception", (PyCFunction)PyRecurrence_add_exception, METH_VARARGS, ""},
     {"add_global_change", (PyCFunction)PyRecurrence_add_global_change, METH_VARARGS, ""},
+    {"contains_ref", (PyCFunction)PyRecurrence_contains_ref, METH_O, ""},
     {"get_spawns", (PyCFunction)PyRecurrence_get_spawns, METH_O, ""},
     {"reset_exceptions", (PyCFunction)PyRecurrence_reset_exceptions, METH_NOARGS, ""},
     {"reset_spawn_cache", (PyCFunction)PyRecurrence_reset_spawn_cache, METH_NOARGS, ""},
@@ -3960,7 +3972,6 @@ static PyGetSetDef PyRecurrence_getseters[] = {
     {"ref", (getter)PyRecurrence_ref, (setter)PyRecurrence_ref_set, NULL, NULL},
     {"date2exception", (getter)PyRecurrence_date2exception, NULL, NULL, NULL},
     {"date2globalchange", (getter)PyRecurrence_date2globalchange, NULL, NULL, NULL},
-    {"date2instances", (getter)PyRecurrence_date2instances, NULL, NULL, NULL},
     {0, 0, 0, 0, 0},
 };
 
