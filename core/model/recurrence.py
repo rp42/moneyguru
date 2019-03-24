@@ -157,19 +157,14 @@ class Recurrence:
             repeat_type = RepeatType.Monthly
         self._inner = _Recurrence(
             ref, RepeatType.to_int(repeat_type), repeat_every)
-        #: ``recurrent_date -> transaction`` mapping of schedule exceptions.
-        self.date2exception = {}
-        #: ``recurrent_date -> transaction`` mapping of *global* schedule exceptions.
-        self.date2globalchange = {}
-        #: ``recurrent_date -> transaction`` mapping of spawns. Used as a cache. Frequently purged.
-        self.date2instances = {}
 
     def __repr__(self):
         return '<Recurrence %s %d>' % (self.repeat_type, self.repeat_every)
 
     # --- Private
     def _all_exceptions(self):
-        exceptions = chain(self.date2exception.values(), self.date2globalchange.values())
+        exceptions = chain(
+            self._inner.date2exception.values(), self._inner.date2globalchange.values())
         return (e for e in exceptions if e is not None)
 
     def _update_ref(self):
@@ -178,25 +173,29 @@ class Recurrence:
         # on our first recurrence date.
         date_counter = DateCounter(self.start_date, self.repeat_type, self.repeat_every, datetime.date.max)
         for d in date_counter:
-            if d in self.date2exception and self.date2exception[d] is None:
+            if d in self._inner.date2exception and self._inner.date2exception[d] is None:
                 continue
-            if d in self.date2globalchange:
-                self._inner.ref = self.date2globalchange[d].replicate()
+            if d in self._inner.date2globalchange:
+                self._inner.ref = self._inner.date2globalchange[d].replicate()
             else:
                 self._inner.change(start_date=d)
             break
-        self.date2exception = {d: ex for d, ex in self.date2exception.items() if d > self.start_date}
-        self.date2globalchange = {d: ex for d, ex in self.date2globalchange.items() if d > self.start_date}
+        date2exception = {d: ex for d, ex in self._inner.date2exception.items() if d > self.start_date}
+        self._inner.date2exception.clear()
+        self._inner.date2exception.update(date2exception)
+        date2globalchange = {d: ex for d, ex in self._inner.date2globalchange.items() if d > self.start_date}
+        self._inner.date2globalchange.clear()
+        self._inner.date2globalchange.update(date2globalchange)
         self.reset_spawn_cache()
 
     # --- Public
     def add_exception(self, date, txn):
         spawn = _Spawn(txn, date, txn.date)
-        self.date2exception[date] = spawn
+        self._inner.date2exception[date] = spawn
 
     def add_global_change(self, date, txn):
         spawn = _Spawn(txn, date, txn.date)
-        self.date2globalchange[date] = spawn
+        self._inner.date2globalchange[date] = spawn
 
     def affected_accounts(self):
         """Returns a set of all :class:`.Account` affected by the schedule.
@@ -223,28 +222,28 @@ class Recurrence:
         :param spawn: The spawn to add to :attr:`date2globalchange`.
         :type spawn: :class:`.Spawn`
         """
-        for date in list(self.date2globalchange.keys()):
+        for date in list(self._inner.date2globalchange.keys()):
             if date >= spawn.recurrence_date:
-                del self.date2globalchange[date]
-        for date, exception in list(self.date2exception.items()):
+                del self._inner.date2globalchange[date]
+        for date, exception in list(self._inner.date2exception.items()):
             # we don't want to remove local deletions
             if exception is not None and date >= spawn.recurrence_date:
-                del self.date2exception[date]
-        self.date2globalchange[spawn.recurrence_date] = spawn
+                del self._inner.date2exception[date]
+        self._inner.date2globalchange[spawn.recurrence_date] = spawn
         self._update_ref()
 
     def contains_ref(self, ref):
         if self._inner.ref == ref:
             return True
-        if ref in self.date2globalchange.values():
+        if ref in self._inner.date2globalchange.values():
             return True
-        if ref in self.date2instances.values():
+        if ref in self._inner.date2instances.values():
             return True
         return False
 
     def delete_at(self, date):
         """Create an exception that prevents further spawn at ``date``."""
-        self.date2exception[date] = None
+        self._inner.date2exception[date] = None
         self._update_ref()
 
     def get_spawns(self, end):
@@ -264,10 +263,10 @@ class Recurrence:
         :param datetime.date end: When to stop spawning.
         :rtype: list of :class:`Spawn`
         """
-        if self.date2exception:
-            end = max(end, max(self.date2exception.keys()))
-        if self.date2globalchange:
-            min_date_delta = min(ref.date-date for date, ref in self.date2globalchange.items())
+        if self._inner.date2exception:
+            end = max(end, max(self._inner.date2exception.keys()))
+        if self._inner.date2globalchange:
+            min_date_delta = min(ref.date-date for date, ref in self._inner.date2globalchange.items())
             if min_date_delta < datetime.timedelta(days=0):
                 end += -min_date_delta
         end = min(end, nonone(self.stop_date, datetime.date.max))
@@ -277,22 +276,22 @@ class Recurrence:
         global_date_delta = datetime.timedelta(days=0)
         current_ref = self._inner.ref
         for current_date in date_counter:
-            if current_date in self.date2globalchange:
-                current_ref = self.date2globalchange[current_date]
+            if current_date in self._inner.date2globalchange:
+                current_ref = self._inner.date2globalchange[current_date]
                 global_date_delta = current_ref.date - current_date
-            if current_date in self.date2exception:
-                exception = self.date2exception[current_date]
+            if current_date in self._inner.date2exception:
+                exception = self._inner.date2exception[current_date]
                 if exception is not None:
                     result.append(exception)
             else:
-                if current_date not in self.date2instances:
+                if current_date not in self._inner.date2instances:
                     spawn = _Spawn(current_ref, current_date, current_date)
                     if global_date_delta:
                         # Only muck with spawn.date if we have a delta. otherwise we're breaking
                         # budgets.
                         spawn.date = current_date + global_date_delta
-                    self.date2instances[current_date] = spawn
-                result.append(self.date2instances[current_date])
+                    self._inner.date2instances[current_date] = spawn
+                result.append(self._inner.date2instances[current_date])
         return result
 
     def reassign_account(self, account, reassign_to=None):
@@ -311,19 +310,15 @@ class Recurrence:
         result = Recurrence(
             self._inner.ref.replicate(), self.repeat_type, self.repeat_every)
         result.change(stop_date=self.stop_date)
-        result.date2exception = dict(self.date2exception)
-        result.date2globalchange = dict(self.date2globalchange)
-        result.date2instances = {}
+        result._inner.date2exception.update(self._inner.date2exception)
+        result._inner.date2globalchange.update(self._inner.date2globalchange)
         return result
 
     def reset_exceptions(self):
-        """Empties :attr:`date2exception` and :attr:`date2globalchange`."""
-        self.date2exception = {}
-        self.date2globalchange = {}
+        self._inner.reset_exceptions()
 
     def reset_spawn_cache(self):
-        """Empties :attr:`date2instances`."""
-        self.date2instances = {}
+        self._inner.reset_spawn_cache()
 
     # --- Properties
     @property

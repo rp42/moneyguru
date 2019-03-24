@@ -7,16 +7,6 @@
 from core.model._ccore import UndoStep
 from core.util import extract
 
-SPLIT_SWAP_ATTRS = ['account', 'amount', 'reconciliation_date']
-SCHEDULE_SWAP_ATTRS = [
-    'date2exception', 'date2globalchange', 'date2instances']
-
-def swapvalues(first, second, attrs):
-    for attr in attrs:
-        tmp = getattr(first, attr)
-        setattr(first, attr, getattr(second, attr))
-        setattr(second, attr, tmp)
-
 class Action:
     """A unit of change that can be undone and redone.
 
@@ -114,10 +104,20 @@ class Undoer:
                 stop_date=stop_date,
                 repeat_type=repeat_type,
                 repeat_every=repeat_every)
-            swapvalues(schedule, old, SCHEDULE_SWAP_ATTRS)
+            d = old._inner.date2globalchange.copy()
+            old._inner.date2globalchange.clear()
+            old._inner.date2globalchange.update(schedule._inner.date2globalchange)
+            schedule._inner.date2globalchange.clear()
+            schedule._inner.date2globalchange.update(d)
+            d = old._inner.date2exception.copy()
+            old._inner.date2exception.clear()
+            old._inner.date2exception.update(schedule._inner.date2exception)
+            schedule._inner.date2exception.clear()
+            schedule._inner.date2exception.update(d)
             newold = schedule.ref.replicate()
             schedule.ref.copy_from(old.ref)
             old.ref.copy_from(newold)
+            schedule.reset_spawn_cache()
 
     def _do_deletes(self, accounts, schedules):
         for schedule in schedules:

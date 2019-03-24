@@ -123,6 +123,9 @@ typedef struct {
     PyObject_HEAD
     Recurrence recurrence;
     PyTransaction *ref;
+    PyObject *date2exception;
+    PyObject *date2globalchange;
+    PyObject *date2instances;
 } PyRecurrence;
 
 static PyObject *Recurrence_Type;
@@ -2772,6 +2775,9 @@ PyRecurrence_init(PyRecurrence *self, PyObject *args, PyObject *kwds)
     Py_INCREF(self->ref);
     self->recurrence.start = self->ref->txn->date;
     self->recurrence.stop = 0;
+    self->date2exception = PyDict_New();
+    self->date2globalchange = PyDict_New();
+    self->date2instances = PyDict_New();
     return 0;
 }
 
@@ -2779,6 +2785,9 @@ static void
 PyRecurrence_dealloc(PyRecurrence *self)
 {
     Py_DECREF(self->ref);
+    Py_DECREF(self->date2exception);
+    Py_DECREF(self->date2globalchange);
+    Py_DECREF(self->date2instances);
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -2810,6 +2819,21 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
     if (repeat_every >= 1) {
         self->recurrence.every = repeat_every;
     }
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+PyRecurrence_reset_exceptions(PyRecurrence *self, PyObject *args)
+{
+    PyDict_Clear(self->date2exception);
+    PyDict_Clear(self->date2globalchange);
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+PyRecurrence_reset_spawn_cache(PyRecurrence *self, PyObject *args)
+{
+    PyDict_Clear(self->date2instances);
     Py_RETURN_NONE;
 }
 
@@ -2852,6 +2876,28 @@ PyRecurrence_ref_set(PyRecurrence *self, PyTransaction *value)
     Py_INCREF(self->ref);
     return 0;
 }
+
+static PyObject *
+PyRecurrence_date2exception(PyRecurrence *self)
+{
+    Py_INCREF(self->date2exception);
+    return (PyObject *)self->date2exception;
+}
+
+static PyObject *
+PyRecurrence_date2globalchange(PyRecurrence *self)
+{
+    Py_INCREF(self->date2globalchange);
+    return (PyObject *)self->date2globalchange;
+}
+
+static PyObject *
+PyRecurrence_date2instances(PyRecurrence *self)
+{
+    Py_INCREF(self->date2instances);
+    return (PyObject *)self->date2instances;
+}
+
 
 /* Oven functions */
 
@@ -3727,6 +3773,8 @@ PyType_Spec TransactionList_Type_Spec = {
 
 static PyMethodDef PyRecurrence_methods[] = {
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
+    {"reset_exceptions", (PyCFunction)PyRecurrence_reset_exceptions, METH_NOARGS, ""},
+    {"reset_spawn_cache", (PyCFunction)PyRecurrence_reset_spawn_cache, METH_NOARGS, ""},
     {0, 0, 0, 0},
 };
 
@@ -3736,6 +3784,9 @@ static PyGetSetDef PyRecurrence_getseters[] = {
     {"repeat_type", (getter)PyRecurrence_repeat_type, NULL, NULL, NULL},
     {"repeat_every", (getter)PyRecurrence_repeat_every, NULL, NULL, NULL},
     {"ref", (getter)PyRecurrence_ref, (setter)PyRecurrence_ref_set, NULL, NULL},
+    {"date2exception", (getter)PyRecurrence_date2exception, NULL, NULL, NULL},
+    {"date2globalchange", (getter)PyRecurrence_date2globalchange, NULL, NULL, NULL},
+    {"date2instances", (getter)PyRecurrence_date2instances, NULL, NULL, NULL},
     {0, 0, 0, 0, 0},
 };
 
