@@ -6,6 +6,7 @@
 
 import datetime
 
+from core.model.recurrence import get_repeat_type_desc
 from core.model.transaction import splitted_splits
 from core.trans import trget, tr
 from .column import Column
@@ -77,7 +78,8 @@ class ScheduleTableRow(Row):
             self._stop_date_fmt = self.table.document.app.format_date(self._stop_date)
         else:
             self._stop_date_fmt = ''
-        self._repeat_type = schedule.repeat_type_desc
+        self._repeat_type = get_repeat_type_desc(
+            schedule.repeat_type, schedule.start_date)
         self._interval = str(schedule.repeat_every)
         self._description = txn.description
         self._payee = txn.payee

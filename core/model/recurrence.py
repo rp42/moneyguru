@@ -171,7 +171,6 @@ class Recurrence:
         self.date2globalchange = {}
         #: ``recurrent_date -> transaction`` mapping of spawns. Used as a cache. Frequently purged.
         self.date2instances = {}
-        self._update_rtype_desc()
 
     def __repr__(self):
         return '<Recurrence %s %d>' % (self.repeat_type, self.repeat_every)
@@ -200,10 +199,6 @@ class Recurrence:
         self.date2exception = {d: ex for d, ex in self.date2exception.items() if d > self.start_date}
         self.date2globalchange = {d: ex for d, ex in self.date2globalchange.items() if d > self.start_date}
         self.reset_spawn_cache()
-        self._update_rtype_desc()
-
-    def _update_rtype_desc(self):
-        self._rtype_desc = get_repeat_type_desc(self.repeat_type, self.start_date)
 
     # --- Public
     def affected_accounts(self):
@@ -373,16 +368,6 @@ class Recurrence:
             return
         self._repeat_type = value
         self.reset_exceptions()
-        self._update_rtype_desc()
-
-    @property
-    def repeat_type_desc(self):
-        """``str``. User-readable description of our :attr:`repeat_type`.
-
-        Things like "Daily" and "Weekly". For "Weekday" repeat types, the description is dynamic
-        (depending on :attr:`start_date`) and looks like "Every 2nd friday of the month".
-        """
-        return self._rtype_desc
 
     @property
     def start_date(self):
@@ -398,5 +383,4 @@ class Recurrence:
             return
         self.ref.date = value
         self.reset_exceptions()
-        self._update_rtype_desc()
 
