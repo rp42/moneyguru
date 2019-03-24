@@ -702,18 +702,18 @@ def compare_apps(first, second, qif_mode=False):
         eq_(rec1.repeat_every, rec2.repeat_every)
         compare_txns(rec1.ref, rec2.ref)
         eq_(rec1.stop_date, rec2.stop_date)
-        eq_(len(rec1._inner.date2exception), len(rec2._inner.date2exception))
-        for date_ in rec1._inner.date2exception:
-            exc1 = rec1._inner.date2exception[date_]
-            exc2 = rec2._inner.date2exception[date_]
+        eq_(len(rec1.date2exception), len(rec2.date2exception))
+        for date_ in rec1.date2exception:
+            exc1 = rec1.date2exception[date_]
+            exc2 = rec2.date2exception[date_]
             if exc1 is None:
                 assert exc2 is None
             else:
                 compare_txns(exc1, exc2)
-        eq_(len(rec1._inner.date2globalchange), len(rec2._inner.date2globalchange))
-        for date_ in rec1._inner.date2globalchange:
-            txn1 = rec1._inner.date2globalchange[date_]
-            txn2 = rec2._inner.date2globalchange[date_]
+        eq_(len(rec1.date2globalchange), len(rec2.date2globalchange))
+        for date_ in rec1.date2globalchange:
+            txn1 = rec1.date2globalchange[date_]
+            txn2 = rec2.date2globalchange[date_]
             compare_txns(txn1, txn2)
 
 def print_table(table, extra_attrs=[]):

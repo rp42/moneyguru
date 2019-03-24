@@ -85,12 +85,12 @@ def save(filename, document_id, properties, accounts, transactions, schedules):
         attrib['every'] = str(recurrence.repeat_every)
         if recurrence.stop_date is not None:
             attrib['stop_date'] = date2str(recurrence.stop_date)
-        for date, change in recurrence._inner.date2globalchange.items():
+        for date, change in recurrence.date2globalchange.items():
             change_element = ET.SubElement(recurrence_element, 'change')
             change_element.attrib['date'] = date2str(date)
             if change is not None:
                 write_transaction_element(change_element, change)
-        for date, exception in recurrence._inner.date2exception.items():
+        for date, exception in recurrence.date2exception.items():
             exception_element = ET.SubElement(recurrence_element, 'exception')
             exception_element.attrib['date'] = date2str(date)
             if exception is not None:
