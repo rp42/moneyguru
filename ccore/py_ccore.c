@@ -2861,7 +2861,7 @@ PyRecurrence_update_ref(PyRecurrence *self)
             break;
         }
         // We have a deleted spawn. We'll advance our start date
-        date = inc_date(date, self->recurrence.type, self->recurrence.every);
+        date = inc_date_skip(date, self->recurrence.type, self->recurrence.every);
     }
     PyObject *date_py = time2pydate(date);
     PyObject *newref = PyDict_GetItem(self->date2globalchange, date_py);

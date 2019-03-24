@@ -105,3 +105,16 @@ inc_date(time_t date, RepeatType repeat_type, int count)
         default: return date;
     }
 }
+
+time_t
+inc_date_skip(time_t date, RepeatType repeat_type, int count)
+{
+    // Avoid infinite loops by looping a predefined number of times.
+    for (int i=1; i<10; i++) {
+        time_t res = inc_date(date, repeat_type, count*i);
+        if (res != -1) {
+            return res;
+        }
+    }
+    return -1;
+}

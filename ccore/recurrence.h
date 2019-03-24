@@ -43,3 +43,15 @@ typedef struct {
  */
 time_t
 inc_date(time_t date, RepeatType repeat_type, int count);
+
+/* Calls inc_date and "skips" invalid dates
+ *
+ * When inc_date returns an invalid date (possible in some monthly and weekly
+ * situations), it "skips" the date and returns the next one, with the same
+ * repeat_type and count.
+ *
+ * Also returns -1 on error, but this time, if you get -1, something is really
+ * wrong.
+ */
+time_t
+inc_date_skip(time_t date, RepeatType repeat_type, int count);
