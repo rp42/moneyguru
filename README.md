@@ -116,7 +116,7 @@ part of this repo as git submodules:
 
 ### Prerequisites
 
-* Python 3.4+
+* Python 3.5+
 * PyQt5
 * SQLite 3 (as a library)
 * Glib
