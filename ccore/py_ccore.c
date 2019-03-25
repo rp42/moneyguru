@@ -3033,21 +3033,6 @@ PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
 }
 
 static PyObject*
-PyRecurrence_add_exception(PyRecurrence *self, PyObject *args)
-{
-    PyObject *date_py;
-    PyTransaction *txn;
-
-    if (!PyArg_ParseTuple(args, "OO", &date_py, &txn)) {
-        return NULL;
-    }
-    time_t date = pydate2time(date_py);
-    PyTransaction *spawn = _PyRecurrence_spawn(txn, date, txn->txn->date);
-    PyDict_SetItem(self->date2exception, date_py, (PyObject *)spawn);
-    Py_RETURN_NONE;
-}
-
-static PyObject*
 PyRecurrence_add_global_change(PyRecurrence *self, PyObject *args)
 {
     PyObject *date_py;
@@ -4083,7 +4068,6 @@ PyType_Spec TransactionList_Type_Spec = {
 };
 
 static PyMethodDef PyRecurrence_methods[] = {
-    {"add_exception", (PyCFunction)PyRecurrence_add_exception, METH_VARARGS, ""},
     {"add_global_change", (PyCFunction)PyRecurrence_add_global_change, METH_VARARGS, ""},
     {"affected_accounts", (PyCFunction)PyRecurrence_affected_accounts, METH_NOARGS, ""},
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},

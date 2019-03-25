@@ -138,12 +138,7 @@ class Loader(base.Loader):
             for exception_element in recurrence_element.iter('exception'):
                 try:
                     date = str2date(exception_element.attrib['date'])
-                    txn_element = exception_element.find('transaction')
-                    exception = read_transaction_element(txn_element) if txn_element is not None else None
-                    if exception:
-                        recurrence.add_exception(date, exception)
-                    else:
-                        recurrence.delete_at(date)
+                    recurrence.delete_at(date)
                 except KeyError:
                     continue
             for change_element in recurrence_element.iter('change'):

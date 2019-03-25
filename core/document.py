@@ -115,7 +115,6 @@ class Document(GUIObject):
             os.remove(op.join(self.app.cache_path, existing_names[0]))
 
     def _change_transaction(self, transaction, global_scope=False, **kwargs):
-        print(repr(transaction.ref))
         date = kwargs.get('date', NOEDIT)
         date_changed = date is not NOEDIT and date != transaction.date
         kws = {k: v for k, v in kwargs.items() if v is not NOEDIT}
