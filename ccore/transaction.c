@@ -357,7 +357,7 @@ transaction_cmp(const Transaction *a, const Transaction *b)
 }
 
 bool
-transaction_copy(Transaction *dst, Transaction *src)
+transaction_copy(Transaction *dst, const Transaction *src)
 {
     if (dst == src) {
         // not supposed to be tried

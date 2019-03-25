@@ -183,7 +183,7 @@ transaction_cmp(const Transaction *a, const Transaction *b);
 // If dst is a fresh instance, it *has* to have been zeroed out before calling
 // this.
 bool
-transaction_copy(Transaction *dst, Transaction *src);
+transaction_copy(Transaction *dst, const Transaction *src);
 
 // Returns whether splits hold more than one currency
 bool

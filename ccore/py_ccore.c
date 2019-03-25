@@ -2774,20 +2774,21 @@ static int
 PyRecurrence_init(PyRecurrence *self, PyObject *args, PyObject *kwds)
 {
     PyTransaction *ref;
+    int repeat_type;
+    unsigned int repeat_every;
     static char *kwlist[] = {
         "ref", "repeat_type", "repeat_every", NULL};
 
     int res = PyArg_ParseTupleAndKeywords(
-        args, kwds, "Oii", kwlist,
+        args, kwds, "OiI", kwlist,
         &ref,
-        &self->schedule.type,
-        &self->schedule.every);
+        &repeat_type,
+        &repeat_every);
     if (!res) {
         return -1;
     }
 
-    transaction_copy(&self->schedule.ref, ref->txn);
-    self->schedule.stop = 0;
+    schedule_init(&self->schedule, ref->txn, repeat_type, repeat_every);
     self->date2exception = PyDict_New();
     self->date2globalchange = PyDict_New();
     return 0;
@@ -2805,10 +2806,7 @@ static PyObject*
 PyRecurrence_replicate(PyRecurrence *self)
 {
     PyRecurrence *res = (PyRecurrence *)PyType_GenericAlloc((PyTypeObject *)Recurrence_Type, 0);
-    transaction_copy(&res->schedule.ref, &self->schedule.ref);
-    res->schedule.type = self->schedule.type;
-    res->schedule.every = self->schedule.every;
-    res->schedule.stop = self->schedule.stop;
+    schedule_copy(&res->schedule, &self->schedule);
     res->date2exception = PyDict_Copy(self->date2exception);
     res->date2globalchange = PyDict_Copy(self->date2globalchange);
     return (PyObject *)res;
@@ -2828,11 +2826,11 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
     PyObject *start_date = NULL;
     PyObject *stop_date = NULL;
     int repeat_type = -1;
-    int repeat_every = -1;
+    unsigned int repeat_every = 0;
     static char *kwlist[] = {"start_date", "stop_date", "repeat_type",
         "repeat_every", NULL};
 
-    int res = PyArg_ParseTupleAndKeywords(args, kwds, "|OOii", kwlist,
+    int res = PyArg_ParseTupleAndKeywords(args, kwds, "|OOiI", kwlist,
         &start_date, &stop_date, &repeat_type, &repeat_every);
     if (!res) {
         return NULL;
