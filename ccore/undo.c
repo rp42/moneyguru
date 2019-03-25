@@ -151,6 +151,25 @@ _swap_txns(ChangedTransaction *txns, int count, AccountList *alist)
     return true;
 }
 
+static bool
+_swap_scheds(ChangedSchedule *scheds, int count)
+{
+    for (int i=0; i<count; i++) {
+        ChangedSchedule *c = &scheds[i];
+        Schedule tmp;
+        if (c->sched == NULL) {
+            return false;
+        }
+        // We don't use schedules_copy() because we don't have to mess with
+        // sub-ownership: these ownerships follow cleanly with a simple
+        // memcpy().
+        memcpy(&tmp, c->sched, sizeof(Schedule));
+        memcpy(c->sched, &c->copy, sizeof(Schedule));
+        memcpy(&c->copy, &tmp, sizeof(Schedule));
+    }
+    return true;
+}
+
 /* Public */
 void
 undostep_init(
@@ -160,7 +179,8 @@ undostep_init(
     Account **changed_accounts,
     Transaction **added_txns,
     Transaction **deleted_txns,
-    Transaction **changed_txns)
+    Transaction **changed_txns,
+    Schedule **changed_scheds)
 {
     int count;
     count = listlen((void *)added_accounts);
@@ -206,6 +226,13 @@ undostep_init(
         c->txn = changed_txns[i];
         transaction_copy(&c->copy, c->txn);
     }
+    step->changed_scheds_count = listlen((void *)changed_scheds);
+    step->changed_scheds = calloc(sizeof(ChangedSchedule), step->changed_scheds_count);
+    for (int i=0; i<step->changed_scheds_count; i++) {
+        ChangedSchedule *c = &step->changed_scheds[i];
+        c->sched = changed_scheds[i];
+        schedule_copy(&c->copy, c->sched);
+    }
 }
 
 void
@@ -227,6 +254,12 @@ undostep_deinit(UndoStep *step)
     }
     free(step->changed_txns);
     step->changed_txns = NULL;
+    for (int i=0; i<step->changed_scheds_count; i++) {
+        ChangedSchedule *c = &step->changed_scheds[i];
+        schedule_deinit(&c->copy);
+    }
+    free(step->changed_scheds);
+    step->changed_scheds = NULL;
 }
 
 bool
@@ -248,6 +281,9 @@ undostep_undo(UndoStep *step, AccountList *alist, TransactionList *tlist)
         return false;
     }
     if (!_swap_txns(step->changed_txns, step->changed_txns_count, alist)) {
+        return false;
+    }
+    if (!_swap_scheds(step->changed_scheds, step->changed_scheds_count)) {
         return false;
     }
     return true;
@@ -272,6 +308,9 @@ undostep_redo(UndoStep *step, AccountList *alist, TransactionList *tlist)
         return false;
     }
     if (!_swap_txns(step->changed_txns, step->changed_txns_count, alist)) {
+        return false;
+    }
+    if (!_swap_scheds(step->changed_scheds, step->changed_scheds_count)) {
         return false;
     }
     return true;

@@ -122,8 +122,6 @@ static PyObject *TransactionList_Type;
 typedef struct {
     PyObject_HEAD
     Schedule schedule;
-    PyObject *date2exception;
-    PyObject *date2globalchange;
 } PyRecurrence;
 
 static PyObject *Recurrence_Type;
@@ -2739,37 +2737,6 @@ PyAccountList_dealloc(PyAccountList *self)
 }
 
 /* PyRecurrence functions */
-/* A recurring transaction (called "Schedule" in the app).
- *
- * One of the great features of moneyGuru is its ability to easy allow
- * exceptions in its schedule.  The amount changes one month? No problem, just
- * change it. The transaction happens a day later?  No problem, change it. From
- * now on, every following transaction is going to happen a day later?  No
- * problem, hold shift when you commit the change to make it "global".
- *
- * All these exceptions, they have to be recorded somewhere. The "one-time"
- * exceptions are kept in :attr:`date2exception`. The date used in the mapping
- * is :attr:`Spawn.recurrent_date` because when we change the date of an
- * exception, we still want to remember which recurrent date it replaces, so we
- * used the date at which the *regular* transaction was supposed to happen.
- *
- * There are also the "global" exceptions, which are stored in
- * :attr:`date2globalchange` and work kinda like normal exception, except that
- * from the date they first happen, all following spawns are going to use this
- * exception as a transaction model. This includes date. That is, if a global
- * exception is 3 days later than its :attr:`Spawn.recurrent_date`, then all
- * following spawns are going to to be 3 days later.
- *
- * Exceptions can override each other. We can be riding on a global exception
- * and, suddenly, a newer global or local exception is there! Well, we apply
- * that exception.
- *
- * An exception can also be a deletion, that is "oh, this week that transaction
- * didn't happen".  This is recorded by putting ``None`` in
- * :attr:`date2exception`. When this deletion is done as a global change (from
- * this date, this schedule doesn't happen anymore), we simply set
- * :attr:`stop_date`.
- */
 static int
 PyRecurrence_init(PyRecurrence *self, PyObject *args, PyObject *kwds)
 {
@@ -2789,16 +2756,13 @@ PyRecurrence_init(PyRecurrence *self, PyObject *args, PyObject *kwds)
     }
 
     schedule_init(&self->schedule, ref->txn, repeat_type, repeat_every);
-    self->date2exception = PyDict_New();
-    self->date2globalchange = PyDict_New();
     return 0;
 }
 
 static void
 PyRecurrence_dealloc(PyRecurrence *self)
 {
-    Py_DECREF(self->date2exception);
-    Py_DECREF(self->date2globalchange);
+    schedule_deinit(&self->schedule);
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -2807,17 +2771,7 @@ PyRecurrence_replicate(PyRecurrence *self)
 {
     PyRecurrence *res = (PyRecurrence *)PyType_GenericAlloc((PyTypeObject *)Recurrence_Type, 0);
     schedule_copy(&res->schedule, &self->schedule);
-    res->date2exception = PyDict_Copy(self->date2exception);
-    res->date2globalchange = PyDict_Copy(self->date2globalchange);
     return (PyObject *)res;
-}
-
-static PyObject*
-PyRecurrence_reset_exceptions(PyRecurrence *self)
-{
-    PyDict_Clear(self->date2exception);
-    PyDict_Clear(self->date2globalchange);
-    Py_RETURN_NONE;
 }
 
 static PyObject*
@@ -2843,7 +2797,7 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
         }
         if (self->schedule.ref.date != newdate) {
             self->schedule.ref.date = newdate;
-            PyRecurrence_reset_exceptions(self);
+            schedule_reset_exceptions(&self->schedule);
         }
     }
     if (stop_date != NULL) {
@@ -2851,65 +2805,12 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
     }
     if ((repeat_type >= 1) && ((RepeatType)repeat_type != self->schedule.type)) {
         self->schedule.type = repeat_type;
-        PyRecurrence_reset_exceptions(self);
+        schedule_reset_exceptions(&self->schedule);
     }
     if ((repeat_every >= 1) && (repeat_every != self->schedule.every)) {
         self->schedule.every = repeat_every;
-        PyRecurrence_reset_exceptions(self);
+        schedule_reset_exceptions(&self->schedule);
     }
-    Py_RETURN_NONE;
-}
-
-static PyObject*
-PyRecurrence_update_ref(PyRecurrence *self)
-{
-    /* Go through our schedule dates and see if we should either move our
-     * start date due to deleted spawns or to update or ref transaction due to
-     * a global change that end up being on our first schedule date.
-     */
-    time_t date = self->schedule.ref.date;
-    while (true) {
-        PyObject *date_py = time2pydate(date);
-        PyObject *exception = PyDict_GetItem(self->date2exception, date_py);
-        Py_DECREF(date_py);
-        if (exception != Py_None) {
-            // Not a deleted spawn? we're finished with our loop
-            break;
-        }
-        // We have a deleted spawn. We'll advance our start date
-        date = inc_date_skip(date, self->schedule.type, self->schedule.every);
-    }
-    PyObject *date_py = time2pydate(date);
-    PyObject *newref = PyDict_GetItem(self->date2globalchange, date_py);
-    if (newref != NULL) {
-        // We have a global change matching. this is our new ref
-        transaction_copy(&self->schedule.ref, ((PyTransaction *)newref)->txn);
-        PyDict_DelItem(self->date2globalchange, date_py);
-    } else {
-        // we just need to advance our new date
-        self->schedule.ref.date = date;
-    }
-    Py_DECREF(date_py);
-
-    // Now, let's clear our dicts from old stuff.
-    PyObject *keys = PyDict_Keys(self->date2exception);
-    for (Py_ssize_t i=0; i<PyList_Size(keys); i++) {
-        PyObject *py = PyList_GET_ITEM(keys, i);
-        time_t d = pydate2time(py);
-        if (d <= date) {
-            PyDict_DelItem(self->date2exception, py);
-        }
-    }
-    Py_DECREF(keys);
-    keys = PyDict_Keys(self->date2globalchange);
-    for (Py_ssize_t i=0; i<PyList_Size(keys); i++) {
-        PyObject *py = PyList_GET_ITEM(keys, i);
-        time_t d = pydate2time(py);
-        if (d <= date) {
-            PyDict_DelItem(self->date2globalchange, py);
-        }
-    }
-    Py_DECREF(keys);
     Py_RETURN_NONE;
 }
 
@@ -2947,19 +2848,18 @@ PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
     int incsize = 0;
     time_t global_date_delta = 0;
 
-    PyObject *key;
-    PyObject *value;
-    Py_ssize_t pos = 0;
-    while (PyDict_Next(self->date2exception, &pos, &key, NULL)) {
-        time_t d = pydate2time(key);
-        if (d > end) {
-            end = d;
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, self->schedule.deletions);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        if ((time_t)key > end) {
+            end = (time_t)key;
         }
     }
-    pos = 0;
-    while (PyDict_Next(self->date2globalchange, &pos, &key, &value)) {
-        time_t rd = pydate2time(key);
-        time_t vd = ((PyTransaction *)value)->txn->date;
+    g_hash_table_iter_init(&iter, self->schedule.globalchanges);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        time_t rd = (time_t)key;
+        time_t vd = ((Transaction *)value)->date;
         if (vd < rd) {
             end += (rd - vd);
         }
@@ -2977,20 +2877,18 @@ PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
         if (date > end) {
             break;
         }
-        PyObject *date_py = time2pydate(date);
-        PyObject *txn = PyDict_GetItem(self->date2globalchange, date_py);
+        Transaction *txn = g_hash_table_lookup(
+            self->schedule.globalchanges, (gpointer)date);
         if (txn != NULL) {
-            current_ref = ((PyTransaction *)txn)->txn;
+            current_ref = txn;
             global_date_delta = current_ref->date - date;
         }
-        txn = PyDict_GetItem(self->date2exception, date_py);
         // if txn != NULL, this schedule period is deleted
-        if (txn == NULL) {
+        if (!schedule_is_deleted_at(&self->schedule, date)) {
             time_t spawn_date = date + global_date_delta;
             PyTransaction *spawn = _PyRecurrence_spawn(current_ref, date, spawn_date);
             PyList_Append(spawns, (PyObject *)spawn);
         }
-        Py_DECREF(date_py);
     }
     return spawns;
 }
@@ -3005,8 +2903,7 @@ PyRecurrence_add_global_change(PyRecurrence *self, PyObject *args)
         return NULL;
     }
     time_t date = pydate2time(date_py);
-    PyTransaction *spawn = _PyRecurrence_spawn(txn->txn, date, txn->txn->date);
-    PyDict_SetItem(self->date2globalchange, date_py, (PyObject *)spawn);
+    schedule_add_global_change(&self->schedule, date, txn->txn);
     Py_RETURN_NONE;
 }
 
@@ -3017,21 +2914,21 @@ PyRecurrence_contains_spawn(PyRecurrence *self, PyTransaction *spawn_py)
     if (spawn->ref == &self->schedule.ref) {
         Py_RETURN_TRUE;
     }
-    PyTransaction *ref_py = _PyTransaction_from_txn(spawn->ref);
-    PyObject *values = PyDict_Values(self->date2globalchange);
-    if (PySequence_Contains(values, (PyObject *)ref_py)) {
-        Py_RETURN_TRUE;
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, self->schedule.globalchanges);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        if ((Transaction *)value == spawn->ref) {
+            Py_RETURN_TRUE;
+        }
     }
-    Py_DECREF(values);
     Py_RETURN_FALSE;
 }
 
 static PyObject*
 PyRecurrence_delete_at(PyRecurrence *self, PyObject *date_py)
 {
-    Py_INCREF(Py_None);
-    PyDict_SetItem(self->date2exception, date_py, Py_None);
-    PyRecurrence_update_ref(self);
+    schedule_delete_at(&self->schedule, pydate2time(date_py));
     Py_RETURN_NONE;
 }
 
@@ -3039,31 +2936,15 @@ static PyObject*
 PyRecurrence_change_globally(PyRecurrence *self, PyTransaction *spawn)
 {
     time_t rdate = spawn->txn->recurrence_date;
-    PyObject *keys = PyDict_Keys(self->date2exception);
-    for (Py_ssize_t i=0; i<PyList_Size(keys); i++) {
-        PyObject *py = PyList_GET_ITEM(keys, i);
-        time_t d = pydate2time(py);
-        if (d >= rdate) {
-            PyObject *txn = PyDict_GetItem(self->date2exception, py);
-            // we don't want to remove local deletions
-            if (txn != Py_None) {
-                PyDict_DelItem(self->date2exception, py);
-            }
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, self->schedule.globalchanges);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        if ((time_t)key >= rdate) {
+            g_hash_table_iter_remove(&iter);
         }
     }
-    Py_DECREF(keys);
-    keys = PyDict_Keys(self->date2globalchange);
-    for (Py_ssize_t i=0; i<PyList_Size(keys); i++) {
-        PyObject *py = PyList_GET_ITEM(keys, i);
-        time_t d = pydate2time(py);
-        if (d >= rdate) {
-            PyDict_DelItem(self->date2globalchange, py);
-        }
-    }
-    Py_DECREF(keys);
-    Py_INCREF(spawn);
-    PyDict_SetItem(self->date2globalchange, time2pydate(rdate), (PyObject *)spawn);
-    PyRecurrence_update_ref(self);
+    schedule_add_global_change(&self->schedule, rdate, spawn->txn);
     Py_RETURN_NONE;
 }
 
@@ -3071,21 +2952,12 @@ static PyObject *
 PyRecurrence_affected_accounts(PyRecurrence *self)
 {
     PyObject *res = _PyTransaction_affected_accounts(&self->schedule.ref);
-    PyObject *value;
-    Py_ssize_t pos = 0;
-    while (PyDict_Next(self->date2exception, &pos, NULL, &value)) {
-        if (value == Py_None) {
-            continue;
-        }
-        PyObject *affected = PyTransaction_affected_accounts((PyTransaction *)value);
-        Py_DECREF(PyNumber_InPlaceOr(res, affected));
-    }
-    pos = 0;
-    while (PyDict_Next(self->date2globalchange, &pos, NULL, &value)) {
-        if (value == Py_None) {
-            continue;
-        }
-        PyObject *affected = PyTransaction_affected_accounts((PyTransaction *)value);
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, self->schedule.globalchanges);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        PyTransaction *txn_py = _PyTransaction_from_txn((Transaction *)value);
+        PyObject *affected = PyTransaction_affected_accounts(txn_py);
         Py_DECREF(PyNumber_InPlaceOr(res, affected));
     }
     return res;
@@ -3098,22 +2970,12 @@ PyRecurrence_reassign_account(PyRecurrence *self, PyObject *args)
     if (PyTransaction_reassign_account(txn, args) == NULL) {
         return NULL;
     }
-    PyObject *value;
-    Py_ssize_t pos = 0;
-    while (PyDict_Next(self->date2exception, &pos, NULL, &value)) {
-        if (value == Py_None) {
-            continue;
-        }
-        if (PyTransaction_reassign_account((PyTransaction *)value, args) == NULL) {
-            return NULL;
-        }
-    }
-    pos = 0;
-    while (PyDict_Next(self->date2globalchange, &pos, NULL, &value)) {
-        if (value == Py_None) {
-            continue;
-        }
-        if (PyTransaction_reassign_account((PyTransaction *)value, args) == NULL) {
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, self->schedule.globalchanges);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        PyTransaction *txn_py = _PyTransaction_from_txn((Transaction *)value);
+        if (PyTransaction_reassign_account(txn_py, args) == NULL) {
             return NULL;
         }
     }
@@ -3153,15 +3015,35 @@ PyRecurrence_ref(PyRecurrence *self)
 static PyObject *
 PyRecurrence_date2exception(PyRecurrence *self)
 {
-    Py_INCREF(self->date2exception);
-    return (PyObject *)self->date2exception;
+    PyObject *res = PyDict_New();
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, self->schedule.deletions);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        time_t date = (time_t)key;
+        PyObject *date_py = time2pydate(date);
+        PyDict_SetItem(res, date_py, Py_None);
+        Py_DECREF(date_py);
+    }
+    return res;
 }
 
 static PyObject *
 PyRecurrence_date2globalchange(PyRecurrence *self)
 {
-    Py_INCREF(self->date2globalchange);
-    return (PyObject *)self->date2globalchange;
+    PyObject *res = PyDict_New();
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, self->schedule.globalchanges);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        time_t date = (time_t)key;
+        PyTransaction *txn_py = _PyTransaction_from_txn((Transaction *)value);
+        PyObject *date_py = time2pydate(date);
+        PyDict_SetItem(res, date_py, (PyObject *)txn_py);
+        Py_DECREF(date_py);
+        Py_DECREF(txn_py);
+    }
+    return res;
 }
 
 /* Oven functions */
@@ -3592,18 +3474,35 @@ _pyseq2txns(PyObject *seq)
     return res;
 }
 
+static Schedule**
+_pyseq2scheds(PyObject *seq)
+{
+    Schedule **res;
+    Py_ssize_t len = PySequence_Length(seq);
+    res = malloc(sizeof(Schedule*) * (len + 1));
+    PyObject *fast = PySequence_Fast(seq, "");
+    for (int i=0; i<len; i++) {
+        res[i] = &(((PyRecurrence *)PySequence_Fast_GET_ITEM(fast, i))->schedule);
+    }
+    res[len] = NULL;
+    Py_DECREF(fast);
+    return res;
+}
+
 static int
 PyUndoStep_init(PyUndoStep *self, PyObject *args, PyObject *kwds)
 {
     PyObject *added_accounts, *deleted_accounts, *changed_accounts;
     PyObject *added_txns, *deleted_txns, *changed_txns;
+    PyObject *changed_scheds;
     static char *kwlist[] = {
         "added_accounts", "deleted_accounts", "changed_accounts",
-        "added_txns", "deleted_txns", "changed_txns", NULL};
+        "added_txns", "deleted_txns", "changed_txns", "changed_scheds", NULL};
 
     int res = PyArg_ParseTupleAndKeywords(
-        args, kwds, "OOOOOO", kwlist, &added_accounts, &deleted_accounts,
-        &changed_accounts, &added_txns, &deleted_txns, &changed_txns);
+        args, kwds, "OOOOOOO", kwlist, &added_accounts, &deleted_accounts,
+        &changed_accounts, &added_txns, &deleted_txns, &changed_txns,
+        &changed_scheds);
     if (!res) {
         return -1;
     }
@@ -3613,13 +3512,15 @@ PyUndoStep_init(PyUndoStep *self, PyObject *args, PyObject *kwds)
     Transaction **at = _pyseq2txns(added_txns);
     Transaction **dt = _pyseq2txns(deleted_txns);
     Transaction **ct = _pyseq2txns(changed_txns);
-    undostep_init(&self->step, aa, da, ca, at, dt, ct);
+    Schedule **cs = _pyseq2scheds(changed_scheds);
+    undostep_init(&self->step, aa, da, ca, at, dt, ct, cs);
     free(aa);
     free(da);
     free(ca);
     free(at);
     free(dt);
     free(ct);
+    free(cs);
     return 0;
 }
 
@@ -4035,7 +3936,6 @@ static PyMethodDef PyRecurrence_methods[] = {
     {"get_spawns", (PyCFunction)PyRecurrence_get_spawns, METH_O, ""},
     {"replicate", (PyCFunction)PyRecurrence_replicate, METH_NOARGS, ""},
     {"reassign_account", (PyCFunction)PyRecurrence_reassign_account, METH_VARARGS, ""},
-    {"reset_exceptions", (PyCFunction)PyRecurrence_reset_exceptions, METH_NOARGS, ""},
     {0, 0, 0, 0},
 };
 

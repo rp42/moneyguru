@@ -1,6 +1,7 @@
 #pragma once
 #include "accounts.h"
 #include "transactions.h"
+#include "schedule.h"
 
 typedef struct {
     Account *account;
@@ -11,6 +12,11 @@ typedef struct {
     Transaction *txn;
     Transaction copy;
 } ChangedTransaction;
+
+typedef struct {
+    Schedule *sched;
+    Schedule copy;
+} ChangedSchedule;
 
 /* References to added and deleted entities are direct references. The
  * AccountList and TransactionList manage a "trash can" and always own those
@@ -35,6 +41,9 @@ typedef struct {
     Transaction **deleted_txns;
     ChangedTransaction *changed_txns;
     int changed_txns_count;
+    // We don't manage added/deleted schedules yet, only changed ones.
+    ChangedSchedule *changed_scheds;
+    int changed_scheds_count;
 } UndoStep;
 
 /* This function takes care of make appropriate copies. You should send it
@@ -48,7 +57,8 @@ undostep_init(
     Account **changed_accounts,
     Transaction **added_txns,
     Transaction **deleted_txns,
-    Transaction **changed_txns);
+    Transaction **changed_txns,
+    Schedule **changed_scheds);
 
 void
 undostep_deinit(UndoStep *step);

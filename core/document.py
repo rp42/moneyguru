@@ -167,18 +167,6 @@ class Document(GUIObject):
         else:
             return False
 
-    def _reconcile_spawn_split(self, entry, reconciliation_date):
-        # returns a reference to the corresponding materialized split
-        schedule = find_schedule_of_spawn(entry.transaction, self.schedules)
-        assert schedule is not None
-        schedule.delete_at(entry.transaction.recurrence_date)
-        materialized = entry.transaction.materialize()
-        self.transactions.add(materialized)
-        split_index = entry.transaction.splits.index(entry.split)
-        materialized_split = materialized.splits[split_index]
-        materialized_split.reconciliation_date = reconciliation_date
-        return materialized, materialized_split
-
     def _restore_preferences_after_load(self):
         # some preference need the file loaded before attempting a restore
         logging.debug('restore_preferences_after_load() beginning')
@@ -455,10 +443,10 @@ class Document(GUIObject):
         assert schedule is not None
         action = Action(tr('Materialize transaction'))
         action.change_schedule(schedule)
-        schedule.delete_at(spawn.recurrence_date)
         materialized = spawn.materialize()
         action.added_transactions |= {materialized}
         self._undoer.record(action)
+        schedule.delete_at(spawn.recurrence_date)
         self.transactions.add(materialized)
         self._cook(from_date=materialized.date)
 
@@ -506,11 +494,23 @@ class Document(GUIObject):
         else:
             global_scope = False # It doesn't make sense to set a reconciliation date globally
         action = self._get_action_from_changed_transactions([entry.transaction], global_scope)
+        # schedules have to be deleted *after* the undo action record
+        schedules_to_delete = []
         if reconciliation_date is not NOEDIT and entry.transaction.is_spawn:
-            newtxn, newsplit = self._reconcile_spawn_split(entry, reconciliation_date)
+            schedule = find_schedule_of_spawn(entry.transaction, self.schedules)
+            assert schedule is not None
+            action.change_schedule(schedule)
+            schedules_to_delete.append((schedule, entry.transaction.recurrence_date))
+            newtxn = entry.transaction.materialize()
+            self.transactions.add(newtxn)
+            split_index = entry.transaction.splits.index(entry.split)
+            newsplit = newtxn.splits[split_index]
+            newsplit.reconciliation_date = reconciliation_date
             entry = Entry(newsplit, newtxn)
             action.added_transactions.add(newtxn)
         self._undoer.record(action)
+        for schedule, recurrence_date in schedules_to_delete:
+            schedule.delete_at(recurrence_date)
         candidate_dates = [entry.date, date, reconciliation_date, entry.reconciliation_date]
         min_date = min(d for d in candidate_dates if d is not NOEDIT and d is not None)
         if reconciliation_date is not NOEDIT:
@@ -557,15 +557,24 @@ class Document(GUIObject):
         # spawns have to be processed before the action's recording, but
         # record() has to be called before we change the entries. This is why
         # we have this rather convulted code.
+        schedules_to_delete = []
         if newvalue:
             for spawn in spawns:
-                # XXX update transaction selection
-                newtxn, newsplit = self._reconcile_spawn_split(
-                    spawn, spawn.transaction.date)
-                action.added_transactions.add(newtxn)
+                schedule = find_schedule_of_spawn(spawn.transaction, self.schedules)
+                assert schedule is not None
+                schedules_to_delete.append((schedule, spawn))
+                materialized = spawn.transaction.materialize()
+                self.transactions.add(materialized)
+                action.added_transactions.add(materialized)
+                split_index = spawn.transaction.splits.index(spawn.split)
+                newsplit = materialized.splits[split_index]
+                newsplit.reconciliation_date = materialized.date
         self._undoer.record(action)
+        for schedule, spawn in schedules_to_delete:
+            schedule.delete_at(spawn.transaction.recurrence_date)
         if newvalue:
             for entry in entries:
+                # XXX update transaction selection
                 entry.split.reconciliation_date = entry.transaction.date
         else:
             for entry in entries:

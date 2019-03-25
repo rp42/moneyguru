@@ -36,7 +36,7 @@ class Action:
         self.changed_transactions = set()
         self.deleted_transactions = set()
         self.added_schedules = set()
-        self.changed_schedules = {}
+        self.changed_schedules = set()
         self.deleted_schedules = set()
 
     def change_accounts(self, accounts):
@@ -45,8 +45,7 @@ class Action:
 
     def change_schedule(self, schedule):
         """Record imminent changes to ``schedule``."""
-        if schedule not in self.changed_schedules:
-            self.changed_schedules[schedule] = schedule.replicate()
+        self.changed_schedules.add(schedule)
 
     def change_transactions(self, transactions, schedules):
         """Record imminent changes to ``transactions``.
@@ -87,38 +86,11 @@ class Undoer:
         self._save_point = None
 
     # --- Private
-    def _do_adds(self, accounts, schedules):
+    def _do_adds(self, schedules):
         for schedule in schedules:
             self._scheduled.append(schedule)
 
-    def _do_changes(self, action):
-        for schedule, old in action.changed_schedules.items():
-            stop_date = old.stop_date
-            repeat_type = old.repeat_type
-            repeat_every = old.repeat_every
-            old.change(
-                stop_date=schedule.stop_date,
-                repeat_type=schedule.repeat_type,
-                repeat_every=schedule.repeat_every)
-            schedule.change(
-                stop_date=stop_date,
-                repeat_type=repeat_type,
-                repeat_every=repeat_every)
-            d = old.date2globalchange.copy()
-            old.date2globalchange.clear()
-            old.date2globalchange.update(schedule.date2globalchange)
-            schedule.date2globalchange.clear()
-            schedule.date2globalchange.update(d)
-            d = old.date2exception.copy()
-            old.date2exception.clear()
-            old.date2exception.update(schedule.date2exception)
-            schedule.date2exception.clear()
-            schedule.date2exception.update(d)
-            newold = schedule.ref.replicate()
-            schedule.ref.copy_from(old.ref)
-            old.ref.copy_from(newold)
-
-    def _do_deletes(self, accounts, schedules):
+    def _do_deletes(self, schedules):
         for schedule in schedules:
             self._scheduled.remove(schedule)
 
@@ -177,7 +149,8 @@ class Undoer:
             action.changed_accounts,
             action.added_transactions,
             action.deleted_transactions,
-            action.changed_transactions)
+            action.changed_transactions,
+            list(action.changed_schedules))
         if self._index < -1:
             self._actions = self._actions[:self._index + 1]
         self._actions.append(action)
@@ -195,13 +168,8 @@ class Undoer:
         assert self.can_undo()
         action = self._actions[self._index]
         action.undostep.undo(self._accounts, self._transactions)
-        self._do_adds(
-            action.deleted_accounts, action.deleted_schedules,
-        )
-        self._do_deletes(
-            action.added_accounts, action.added_schedules
-        )
-        self._do_changes(action)
+        self._do_adds(action.deleted_schedules)
+        self._do_deletes(action.added_schedules)
         self._transactions.clear_cache()
         self._index -= 1
 
@@ -216,13 +184,8 @@ class Undoer:
         assert self.can_redo()
         action = self._actions[self._index + 1]
         action.undostep.redo(self._accounts, self._transactions)
-        self._do_adds(
-            action.added_accounts, action.added_schedules
-        )
-        self._do_deletes(
-            action.deleted_accounts, action.deleted_schedules,
-        )
-        self._do_changes(action)
+        self._do_adds(action.added_schedules)
+        self._do_deletes(action.deleted_schedules)
         self._transactions.clear_cache()
         self._index += 1
 

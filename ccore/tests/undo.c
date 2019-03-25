@@ -12,7 +12,7 @@ static void test_string_ownership()
     account_init(a, "foo", CAD, ACCOUNT_ASSET);
     UndoStep us = {0};
     Account *changed_accounts[2] = {a, NULL};
-    undostep_init(&us, NULL, NULL, changed_accounts, NULL, NULL, NULL);
+    undostep_init(&us, NULL, NULL, changed_accounts, NULL, NULL, NULL, NULL);
     // We now have a copy of `a` in `us`. Now, let's change the name so that
     // we free the string "foo".
     account_name_set(a, "bar");
