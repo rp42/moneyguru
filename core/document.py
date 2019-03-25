@@ -415,6 +415,9 @@ class Document(GUIObject):
         action.change_transactions(spawns, self.schedules)
         action.deleted_transactions |= set(txns)
         self._undoer.record(action)
+        # to avoid sweeping twn refs from under the rug of other spawns, we
+        # perform schedule deletions at the end of the loop.
+        schedule_deletions = []
         for txn in transactions:
             if txn.is_spawn:
                 schedule = find_schedule_of_spawn(txn, self.schedules)
@@ -422,9 +425,11 @@ class Document(GUIObject):
                 if global_scope:
                     schedule.change(stop_date=txn.recurrence_date - datetime.timedelta(1))
                 else:
-                    schedule.delete_at(txn.recurrence_date)
+                    schedule_deletions.append((schedule, txn.recurrence_date))
             else:
                 self.transactions.remove(txn)
+        for schedule, recurrence_date in schedule_deletions:
+            schedule.delete_at(recurrence_date)
         min_date = min(t.date for t in transactions)
         self._cook(from_date=min_date)
         self.accounts.clean_empty_categories(from_account)

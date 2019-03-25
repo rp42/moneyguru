@@ -122,7 +122,7 @@ static PyObject *TransactionList_Type;
 typedef struct {
     PyObject_HEAD
     Recurrence recurrence;
-    PyTransaction *ref;
+    Transaction ref;
     PyObject *date2exception;
     PyObject *date2globalchange;
     PyObject *date2instances;
@@ -1528,9 +1528,9 @@ PyTransaction_amount_for_account(PyTransaction *self, PyObject *args)
 }
 
 static PyObject *
-PyTransaction_affected_accounts(PyTransaction *self)
+_PyTransaction_affected_accounts(Transaction *txn)
 {
-    Account **accounts = transaction_affected_accounts(self->txn);
+    Account **accounts = transaction_affected_accounts(txn);
     PyObject *res = PySet_New(NULL);
     while (*accounts != NULL) {
         PyAccount *a = _PyAccount_from_account(*accounts);
@@ -1539,6 +1539,12 @@ PyTransaction_affected_accounts(PyTransaction *self)
         accounts++;
     }
     return res;
+}
+
+static PyObject *
+PyTransaction_affected_accounts(PyTransaction *self)
+{
+    return _PyTransaction_affected_accounts(self->txn);
 }
 
 static PyObject *
@@ -2769,20 +2775,21 @@ PyAccountList_dealloc(PyAccountList *self)
 static int
 PyRecurrence_init(PyRecurrence *self, PyObject *args, PyObject *kwds)
 {
+    PyTransaction *ref;
     static char *kwlist[] = {
         "ref", "repeat_type", "repeat_every", NULL};
 
     int res = PyArg_ParseTupleAndKeywords(
         args, kwds, "Oii", kwlist,
-        &self->ref,
+        &ref,
         &self->recurrence.type,
         &self->recurrence.every);
     if (!res) {
         return -1;
     }
 
-    Py_INCREF(self->ref);
-    self->recurrence.start = self->ref->txn->date;
+    transaction_copy(&self->ref, ref->txn);
+    self->recurrence.start = self->ref.date;
     self->recurrence.stop = 0;
     self->date2exception = PyDict_New();
     self->date2globalchange = PyDict_New();
@@ -2793,7 +2800,6 @@ PyRecurrence_init(PyRecurrence *self, PyObject *args, PyObject *kwds)
 static void
 PyRecurrence_dealloc(PyRecurrence *self)
 {
-    Py_DECREF(self->ref);
     Py_DECREF(self->date2exception);
     Py_DECREF(self->date2globalchange);
     Py_DECREF(self->date2instances);
@@ -2804,7 +2810,7 @@ static PyObject*
 PyRecurrence_replicate(PyRecurrence *self)
 {
     PyRecurrence *res = (PyRecurrence *)PyType_GenericAlloc((PyTypeObject *)Recurrence_Type, 0);
-    res->ref = (PyTransaction *)PyTransaction_replicate(self->ref);
+    transaction_copy(&res->ref, &self->ref);
     res->recurrence.type = self->recurrence.type;
     res->recurrence.every = self->recurrence.every;
     res->recurrence.stop = self->recurrence.stop;
@@ -2846,9 +2852,12 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
     }
 
     if (start_date != NULL) {
-        time_t old = self->ref->txn->date;
-        PyTransaction_date_set(self->ref, start_date);
-        if (self->ref->txn->date != old) {
+        time_t newdate = pydate2time(start_date);
+        if (newdate == -1) {
+            return NULL;
+        }
+        if (self->ref.date != newdate) {
+            self->ref.date = newdate;
             PyRecurrence_reset_exceptions(self);
         }
     }
@@ -2874,7 +2883,7 @@ PyRecurrence_update_ref(PyRecurrence *self)
      * start date due to deleted spawns or to update or ref transaction due to
      * a global change that end up being on our first recurrence date.
      */
-    time_t date = self->ref->txn->date;
+    time_t date = self->ref.date;
     while (true) {
         PyObject *date_py = time2pydate(date);
         PyObject *exception = PyDict_GetItem(self->date2exception, date_py);
@@ -2890,13 +2899,11 @@ PyRecurrence_update_ref(PyRecurrence *self)
     PyObject *newref = PyDict_GetItem(self->date2globalchange, date_py);
     if (newref != NULL) {
         // We have a global change matching. this is our new ref
-        Py_DECREF(self->ref);
-        self->ref = (PyTransaction *)newref;
-        Py_INCREF(self->ref);
+        transaction_copy(&self->ref, ((PyTransaction *)newref)->txn);
         PyDict_DelItem(self->date2globalchange, date_py);
     } else {
         // we just need to advance our new date
-        self->ref->txn->date = date;
+        self->ref.date = date;
     }
     Py_DECREF(date_py);
 
@@ -2924,13 +2931,15 @@ PyRecurrence_update_ref(PyRecurrence *self)
 }
 
 static PyTransaction*
-_PyRecurrence_spawn(PyTransaction *ref, time_t recurrence_date, time_t date)
+_PyRecurrence_spawn(Transaction *ref, time_t recurrence_date, time_t date)
 {
-    PyTransaction *spawn = (PyTransaction *)PyTransaction_replicate(ref);
+    PyTransaction *txn = _PyTransaction_from_txn(ref);
+    PyTransaction *spawn = (PyTransaction *)PyTransaction_replicate(txn);
+    Py_DECREF(txn);
     spawn->txn->type = TXN_TYPE_RECURRENCE;
     spawn->txn->date = date;
     spawn->txn->recurrence_date = recurrence_date;
-    spawn->txn->ref = ref->txn;
+    spawn->txn->ref = ref;
     return spawn;
 }
 
@@ -2949,9 +2958,9 @@ _PyRecurrence_spawn(PyTransaction *ref, time_t recurrence_date, time_t date)
 static PyObject*
 PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
 {
-    PyTransaction *current_ref = self->ref;
+    Transaction *current_ref = &self->ref;
     time_t end = pydate2time(end_date);
-    time_t start = current_ref->txn->date;
+    time_t start = current_ref->date;
     int incsize = 0;
     time_t global_date_delta = 0;
 
@@ -2988,15 +2997,12 @@ PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
         PyObject *date_py = time2pydate(date);
         PyObject *txn = PyDict_GetItem(self->date2globalchange, date_py);
         if (txn != NULL) {
-            current_ref = (PyTransaction *)txn;
-            global_date_delta = ((PyTransaction *)current_ref)->txn->date - date;
+            current_ref = ((PyTransaction *)txn)->txn;
+            global_date_delta = current_ref->date - date;
         }
         txn = PyDict_GetItem(self->date2exception, date_py);
-        if (txn != NULL) {
-            if (txn != Py_None) {
-                PyList_Append(spawns, txn);
-            }
-        } else {
+        // if txn != NULL, this recurrence period is deleted
+        if (txn == NULL) {
             txn = PyDict_GetItem(self->date2instances, date_py);
             if (txn == NULL) {
                 time_t spawn_date = date + global_date_delta;
@@ -3021,7 +3027,7 @@ PyRecurrence_add_global_change(PyRecurrence *self, PyObject *args)
         return NULL;
     }
     time_t date = pydate2time(date_py);
-    PyTransaction *spawn = _PyRecurrence_spawn(txn, date, txn->txn->date);
+    PyTransaction *spawn = _PyRecurrence_spawn(txn->txn, date, txn->txn->date);
     PyDict_SetItem(self->date2globalchange, date_py, (PyObject *)spawn);
     Py_RETURN_NONE;
 }
@@ -3030,17 +3036,16 @@ static PyObject*
 PyRecurrence_contains_spawn(PyRecurrence *self, PyTransaction *spawn_py)
 {
     Transaction *spawn = spawn_py->txn;
-    if (spawn->ref == self->ref->txn) {
+    if (spawn->ref == &self->ref) {
         Py_RETURN_TRUE;
     }
-    PyTransaction *ref_py = _PyTransaction_from_txn(spawn->ref);
     PyObject *values = PyDict_Values(self->date2globalchange);
-    if (PySequence_Contains(values, (PyObject *)ref_py)) {
+    if (PySequence_Contains(values, (PyObject *)spawn_py)) {
         Py_RETURN_TRUE;
     }
     Py_DECREF(values);
     values = PyDict_Values(self->date2instances);
-    if (PySequence_Contains(values, (PyObject *)ref_py)) {
+    if (PySequence_Contains(values, (PyObject *)spawn_py)) {
         Py_RETURN_TRUE;
     }
     Py_DECREF(values);
@@ -3091,7 +3096,7 @@ PyRecurrence_change_globally(PyRecurrence *self, PyTransaction *spawn)
 static PyObject *
 PyRecurrence_affected_accounts(PyRecurrence *self)
 {
-    PyObject *res = PyTransaction_affected_accounts(self->ref);
+    PyObject *res = _PyTransaction_affected_accounts(&self->ref);
     PyObject *value;
     Py_ssize_t pos = 0;
     while (PyDict_Next(self->date2exception, &pos, NULL, &value)) {
@@ -3116,7 +3121,8 @@ PyRecurrence_affected_accounts(PyRecurrence *self)
 static PyObject *
 PyRecurrence_reassign_account(PyRecurrence *self, PyObject *args)
 {
-    if (PyTransaction_reassign_account(self->ref, args) == NULL) {
+    PyTransaction *txn = _PyTransaction_from_txn(&self->ref);
+    if (PyTransaction_reassign_account(txn, args) == NULL) {
         return NULL;
     }
     PyObject *value;
@@ -3144,7 +3150,7 @@ PyRecurrence_reassign_account(PyRecurrence *self, PyObject *args)
 static PyObject *
 PyRecurrence_start_date(PyRecurrence *self)
 {
-    return PyTransaction_date(self->ref);
+    return time2pydate(self->ref.date);
 }
 
 static PyObject *
@@ -3168,8 +3174,7 @@ PyRecurrence_repeat_every(PyRecurrence *self)
 static PyObject *
 PyRecurrence_ref(PyRecurrence *self)
 {
-    Py_INCREF(self->ref);
-    return (PyObject *)self->ref;
+    return (PyObject *)_PyTransaction_from_txn(&self->ref);
 }
 
 static PyObject *
