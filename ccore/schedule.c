@@ -88,6 +88,18 @@ schedule_delete_at(Schedule *sched, time_t date)
 }
 
 bool
+schedule_is_alive(Schedule *sched)
+{
+    if (sched->stop == 0) {
+        return true;
+    }
+    // A bit inefficient, but isn't used a lot...
+    GSList *spawns = schedule_get_spawns(sched, sched->stop);
+    g_slist_free_full(spawns, _txn_free);
+    return spawns != NULL;
+}
+
+bool
 schedule_is_deleted_at(const Schedule *sched, time_t date)
 {
     return g_hash_table_contains(sched->deletions, (gpointer)date);

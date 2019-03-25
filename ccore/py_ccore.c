@@ -2815,21 +2815,13 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject*
-PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
+PyRecurrence_is_alive(PyRecurrence *self)
 {
-    time_t end = pydate2time(end_date);
-    GSList *spawns = schedule_get_spawns(&self->schedule, end);
-    PyObject *res = PyList_New(0);
-    GSList *iter = spawns;
-    while (iter) {
-        PyTransaction *spawn = _PyTransaction_from_txn(iter->data);
-        spawn->owned = true; // we own the spawn
-        PyList_Append(res, (PyObject *)spawn);
-        iter = g_slist_next(iter);
+    if (schedule_is_alive(&self->schedule)) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
     }
-    // We free the slist, but not the spawns.
-    g_slist_free(spawns);
-    return res;
 }
 
 static PyObject*
@@ -3923,7 +3915,7 @@ static PyMethodDef PyRecurrence_methods[] = {
     {"change_globally", (PyCFunction)PyRecurrence_change_globally, METH_O, ""},
     {"contains_spawn", (PyCFunction)PyRecurrence_contains_spawn, METH_O, ""},
     {"delete_at", (PyCFunction)PyRecurrence_delete_at, METH_O, ""},
-    {"get_spawns", (PyCFunction)PyRecurrence_get_spawns, METH_O, ""},
+    {"is_alive", (PyCFunction)PyRecurrence_is_alive, METH_NOARGS, ""},
     {"replicate", (PyCFunction)PyRecurrence_replicate, METH_NOARGS, ""},
     {"reassign_account", (PyCFunction)PyRecurrence_reassign_account, METH_VARARGS, ""},
     {0, 0, 0, 0},

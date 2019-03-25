@@ -72,6 +72,10 @@ schedule_copy(Schedule *dst, const Schedule *src);
 void
 schedule_delete_at(Schedule *sched, time_t date);
 
+// Whether the schedule can yield any spawn
+bool
+schedule_is_alive(Schedule *sched);
+
 bool
 schedule_is_deleted_at(const Schedule *sched, time_t date);
 
