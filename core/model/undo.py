@@ -59,7 +59,7 @@ class Action:
             self.changed_transactions.add(t)
         for spawn in spawns:
             for schedule in schedules:
-                if schedule.contains_ref(spawn.ref):
+                if schedule.contains_spawn(spawn):
                     self.change_schedule(schedule)
 
     def change_entries(self, entries, schedules):

@@ -25,7 +25,7 @@ from .model.currency import Currencies
 from .model.date import YearRange
 from .model.oven import Oven
 from .model.undo import Undoer, Action
-from .model.recurrence import find_schedule_of_ref
+from .model.recurrence import find_schedule_of_spawn
 from .saver.native import save as save_native
 
 EXCLUDED_ACCOUNTS_PREFERENCE = 'ExcludedAccounts'
@@ -120,7 +120,7 @@ class Document(GUIObject):
         kws = {k: v for k, v in kwargs.items() if v is not NOEDIT}
         transaction.change(**kws)
         if transaction.is_spawn:
-            schedule = find_schedule_of_ref(transaction.ref, self.schedules)
+            schedule = find_schedule_of_spawn(transaction, self.schedules)
             assert schedule is not None
             if global_scope:
                 schedule.change_globally(transaction)
@@ -169,7 +169,7 @@ class Document(GUIObject):
 
     def _reconcile_spawn_split(self, entry, reconciliation_date):
         # returns a reference to the corresponding materialized split
-        schedule = find_schedule_of_ref(entry.transaction.ref, self.schedules)
+        schedule = find_schedule_of_spawn(entry.transaction, self.schedules)
         assert schedule is not None
         schedule.delete_at(entry.transaction.recurrence_date)
         materialized = entry.transaction.materialize()
@@ -417,7 +417,7 @@ class Document(GUIObject):
         self._undoer.record(action)
         for txn in transactions:
             if txn.is_spawn:
-                schedule = find_schedule_of_ref(txn.ref, self.schedules)
+                schedule = find_schedule_of_spawn(txn, self.schedules)
                 assert schedule is not None
                 if global_scope:
                     schedule.change(stop_date=txn.recurrence_date - datetime.timedelta(1))
@@ -446,7 +446,7 @@ class Document(GUIObject):
 
     def materialize_spawn(self, spawn):
         assert spawn.is_spawn
-        schedule = find_schedule_of_ref(spawn.ref, self.schedules)
+        schedule = find_schedule_of_spawn(spawn, self.schedules)
         assert schedule is not None
         action = Action(tr('Materialize transaction'))
         action.change_schedule(schedule)

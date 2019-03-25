@@ -12,8 +12,8 @@ from core.trans import tr
 from ._ccore import Recurrence # noqa
 from .date import RepeatType
 
-def find_schedule_of_ref(ref, schedules):
-    return first(s for s in schedules if s.contains_ref(ref))
+def find_schedule_of_spawn(spawn, schedules):
+    return first(s for s in schedules if s.contains_spawn(spawn))
 
 def get_repeat_type_desc(repeat_type, start_date):
     res = {

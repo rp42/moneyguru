@@ -1416,27 +1416,6 @@ PyTransaction_mtime_set(PyTransaction *self, PyObject *value)
 }
 
 static PyObject *
-PyTransaction_ref(PyTransaction *self)
-{
-    if (self->txn->ref != NULL) {
-        return (PyObject *)_PyTransaction_from_txn(self->txn->ref);
-    } else {
-        Py_RETURN_NONE;
-    }
-}
-
-static int
-PyTransaction_ref_set(PyTransaction *self, PyObject *value)
-{
-    if (self->txn->ref != NULL) {
-        // not supposed to happen
-        return 1;
-    }
-    self->txn->ref = ((PyTransaction *)value)->txn;
-    return 0;
-}
-
-static PyObject *
 PyTransaction_recurrence_date(PyTransaction *self)
 {
     return time2pydate(self->txn->recurrence_date);
@@ -3048,18 +3027,20 @@ PyRecurrence_add_global_change(PyRecurrence *self, PyObject *args)
 }
 
 static PyObject*
-PyRecurrence_contains_ref(PyRecurrence *self, PyTransaction *ref)
+PyRecurrence_contains_spawn(PyRecurrence *self, PyTransaction *spawn_py)
 {
-    if (ref->txn == self->ref->txn) {
+    Transaction *spawn = spawn_py->txn;
+    if (spawn->ref == self->ref->txn) {
         Py_RETURN_TRUE;
     }
+    PyTransaction *ref_py = _PyTransaction_from_txn(spawn->ref);
     PyObject *values = PyDict_Values(self->date2globalchange);
-    if (PySequence_Contains(values, (PyObject *)ref)) {
+    if (PySequence_Contains(values, (PyObject *)ref_py)) {
         Py_RETURN_TRUE;
     }
     Py_DECREF(values);
     values = PyDict_Values(self->date2instances);
-    if (PySequence_Contains(values, (PyObject *)ref)) {
+    if (PySequence_Contains(values, (PyObject *)ref_py)) {
         Py_RETURN_TRUE;
     }
     Py_DECREF(values);
@@ -4002,7 +3983,6 @@ static PyGetSetDef PyTransaction_getseters[] = {
     {"is_null", (getter)PyTransaction_is_null, NULL, NULL, NULL},
     {"is_spawn", (getter)PyTransaction_is_spawn, NULL, NULL, NULL},
     // recurrence-related
-    {"ref", (getter)PyTransaction_ref, (setter)PyTransaction_ref_set, NULL, NULL},
     {"recurrence_date", (getter)PyTransaction_recurrence_date, (setter)PyTransaction_recurrence_date_set, NULL, NULL},
     {0, 0, 0, 0, 0},
 };
@@ -4072,7 +4052,7 @@ static PyMethodDef PyRecurrence_methods[] = {
     {"affected_accounts", (PyCFunction)PyRecurrence_affected_accounts, METH_NOARGS, ""},
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
     {"change_globally", (PyCFunction)PyRecurrence_change_globally, METH_O, ""},
-    {"contains_ref", (PyCFunction)PyRecurrence_contains_ref, METH_O, ""},
+    {"contains_spawn", (PyCFunction)PyRecurrence_contains_spawn, METH_O, ""},
     {"delete_at", (PyCFunction)PyRecurrence_delete_at, METH_O, ""},
     {"get_spawns", (PyCFunction)PyRecurrence_get_spawns, METH_O, ""},
     {"replicate", (PyCFunction)PyRecurrence_replicate, METH_NOARGS, ""},
