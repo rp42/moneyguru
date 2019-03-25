@@ -86,9 +86,7 @@ class Oven:
         else:
             spawns = []
         txns = list(self._transactions) + spawns
-        # we don't filter out txns > until_date because they might be budgets affecting current data
-        # XXX now that budget's base date is the start date, isn't this untrue?
-        tocook = [t for t in txns if from_date <= t.date]
+        tocook = [t for t in txns if from_date <= t.date <= until_date]
         tocook.sort(key=attrgetter('date'))
         oven_cook_txns(self._accounts, tocook)
         self.transactions += tocook
