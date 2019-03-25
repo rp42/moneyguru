@@ -71,6 +71,7 @@ def save(filename, document_id, properties, accounts, transactions, schedules):
             attrib['notes'] = handle_newlines(account.notes)
     for transaction in transactions:
         write_transaction_element(root, transaction)
+
     # the functionality of the line below is untested because it's an optimisation
     def is_alive(schedule):
         if schedule.stop_date is None:
