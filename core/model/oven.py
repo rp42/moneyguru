@@ -65,9 +65,6 @@ class Oven:
         if until_date is None:
             until_date = self._transactions.last().date if self._transactions else from_date
         # Clear old cooked data
-        for account in self._accounts:
-            entries = self._accounts.entries_for_account(account)
-            entries.clear(from_date)
         if from_date == date.min:
             self.transactions = []
         else:

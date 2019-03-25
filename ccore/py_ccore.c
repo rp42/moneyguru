@@ -2218,22 +2218,6 @@ PyEntryList_last_entry(PyEntryList *self, PyObject *args)
 }
 
 static PyObject*
-PyEntryList_clear(PyEntryList *self, PyObject *args)
-{
-    PyObject *date_p;
-
-    if (!PyArg_ParseTuple(args, "O", &date_p)) {
-        return NULL;
-    }
-    time_t date = pydate2time(date_p);
-    if (date == -1) {
-        return NULL;
-    }
-    entries_clear(self->entries, date);
-    Py_RETURN_NONE;
-}
-
-static PyObject*
 PyEntryList_balance(PyEntryList *self, PyObject *args)
 {
     PyObject *date_p;
@@ -3005,6 +2989,16 @@ py_oven_cook_txns(PyObject *self, PyObject *args)
     }
     time_t from = pydate2time(from_py);
     time_t until = pydate2time(until_py);
+
+    // Clear old cooked entries
+    for (int i=0; i<accounts->alist.count; i++) {
+        Account *a = accounts->alist.accounts[i];
+        EntryList *entries = accounts_entries_for_account(
+            &accounts->alist, a);
+        entries_clear(entries, from);
+    }
+
+    // add relevant txns to cooked txns list
     GSequence *filtered = g_sequence_new(NULL);
     for (unsigned int i=0; i<txns->tlist.count; i++) {
         Transaction *txn = txns->tlist.txns[i];
@@ -3012,6 +3006,8 @@ py_oven_cook_txns(PyObject *self, PyObject *args)
             g_sequence_append(filtered, txn);
         }
     }
+
+    // generate spawns to add to txns list
     Py_ssize_t len = PySequence_Length(schedules);
     for (int i=0; i<len; i++) {
         PyRecurrence *rec = (PyRecurrence *)PyList_GetItem(schedules, i);
@@ -3032,6 +3028,8 @@ py_oven_cook_txns(PyObject *self, PyObject *args)
     }
     g_sequence_sort(filtered, _sort_txn_by_date, NULL);
 
+    // For each txn to cook, generate entries. Also, add txn to resulting
+    // `cooked` list.
     PyObject *cooked = PyList_New(g_sequence_get_length(filtered));
     GSequenceIter *iter1 = g_sequence_get_begin_iter(filtered);
     while (!g_sequence_iter_is_end(iter1)) {
@@ -3060,6 +3058,7 @@ py_oven_cook_txns(PyObject *self, PyObject *args)
     }
     g_sequence_free(filtered);
 
+    // Cook all entries
     GHashTableIter iter2;
     g_hash_table_iter_init(&iter2, accounts->alist.a2entries);
     gpointer _, entries;
@@ -3694,8 +3693,6 @@ static PyMethodDef PyEntryList_methods[] = {
     // Returns the sum of entry amounts occuring in `date_range`.
     // If `currency` is specified, the result is converted to it.
     {"cash_flow", (PyCFunction)PyEntryList_cash_flow, METH_VARARGS, ""},
-    // Remove all entries after `from_date`.
-    {"clear", (PyCFunction)PyEntryList_clear, METH_VARARGS, ""},
     // Return the last entry with a date that isn't after `date`.
     // If `date` isn't specified, returns the last entry in the list.
     {"last_entry", (PyCFunction)PyEntryList_last_entry, METH_VARARGS, ""},
