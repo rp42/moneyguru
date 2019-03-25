@@ -75,6 +75,25 @@ schedule_delete_at(Schedule *sched, time_t date);
 bool
 schedule_is_deleted_at(const Schedule *sched, time_t date);
 
+/* Returns the list of transactions spawned by our schedule.
+ *
+ * We start at :attr:`start_date` and end at ``end``. We have to specify an end
+ * to our spawning to avoid getting infinite results.
+ *
+ * If a changed date end up being smaller than the "spawn date", it's possible
+ * that a spawn that should have been spawned for the date range is not
+ * spawned. Therefore, we always spawn at least until the date of the last
+ * exception. For global changes, it's even more complicated. If the global
+ * date delta is negative enough, we can end up with a spawn that doesn't go
+ * far enough, so we must adjust our max date by this delta.
+ *
+ * The caller is responsible for freeing the resuling GSList. The caller also
+ * inherits ownership of the returned spawn (they're freshly created, not
+ * referenced anywhere).
+ */
+GSList*
+schedule_get_spawns(Schedule *sched, time_t end);
+
 void
 schedule_reset_exceptions(Schedule *sched);
 

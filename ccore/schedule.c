@@ -2,7 +2,7 @@
 
 /* Private */
 static void
-_txn_hash_free(gpointer data)
+_txn_free(gpointer data)
 {
     Transaction *txn = data;
     transaction_deinit(txn);
@@ -30,7 +30,7 @@ schedule_init(
         g_direct_hash,
         g_direct_equal,
         NULL,
-        _txn_hash_free);
+        _txn_free);
     return true;
 }
 
@@ -91,6 +91,65 @@ bool
 schedule_is_deleted_at(const Schedule *sched, time_t date)
 {
     return g_hash_table_contains(sched->deletions, (gpointer)date);
+}
+
+GSList*
+schedule_get_spawns(Schedule *sched, time_t end)
+{
+    Transaction *current_ref = &sched->ref;
+    time_t start = current_ref->date;
+    int incsize = 0;
+    time_t global_date_delta = 0;
+
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, sched->deletions);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        if ((time_t)key > end) {
+            end = (time_t)key;
+        }
+    }
+    g_hash_table_iter_init(&iter, sched->globalchanges);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        time_t rd = (time_t)key;
+        time_t vd = ((Transaction *)value)->date;
+        if (vd < rd) {
+            end += (rd - vd);
+        }
+    }
+    if ((sched->stop > 0) && (end > sched->stop)) {
+        end = sched->stop;
+    }
+
+    GSList *res = NULL;
+    while (true) {
+        time_t date = inc_date(start, sched->type, incsize);
+        incsize += sched->every;
+        if (date == -1) {
+            continue;
+        }
+        if (date > end) {
+            break;
+        }
+        Transaction *txn = g_hash_table_lookup(
+            sched->globalchanges, (gpointer)date);
+        if (txn != NULL) {
+            current_ref = txn;
+            global_date_delta = current_ref->date - date;
+        }
+        // if txn != NULL, this schedule period is deleted
+        if (!schedule_is_deleted_at(sched, date)) {
+            Transaction *spawn = calloc(sizeof(Transaction), 1);
+            transaction_copy(spawn, current_ref);
+            spawn->type = TXN_TYPE_RECURRENCE;
+            spawn->date = date + global_date_delta;
+            spawn->recurrence_date = date;
+            spawn->ref = current_ref;
+            res = g_slist_prepend(res, (gpointer)spawn);
+        }
+    }
+    res = g_slist_reverse(res);
+    return res;
 }
 
 void

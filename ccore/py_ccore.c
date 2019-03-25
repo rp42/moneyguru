@@ -2814,83 +2814,22 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
     Py_RETURN_NONE;
 }
 
-static PyTransaction*
-_PyRecurrence_spawn(Transaction *ref, time_t recurrence_date, time_t date)
-{
-    PyTransaction *txn = _PyTransaction_from_txn(ref);
-    PyTransaction *spawn = (PyTransaction *)PyTransaction_replicate(txn);
-    Py_DECREF(txn);
-    spawn->txn->type = TXN_TYPE_RECURRENCE;
-    spawn->txn->date = date;
-    spawn->txn->recurrence_date = recurrence_date;
-    spawn->txn->ref = ref;
-    return spawn;
-}
-
-/* Returns the list of transactions spawned by our schedule.
- *
- * We start at :attr:`start_date` and end at ``end``. We have to specify an end
- * to our spawning to avoid getting infinite results.
- *
- * If a changed date end up being smaller than the "spawn date", it's possible
- * that a spawn that should have been spawned for the date range is not
- * spawned. Therefore, we always spawn at least until the date of the last
- * exception. For global changes, it's even more complicated. If the global
- * date delta is negative enough, we can end up with a spawn that doesn't go
- * far enough, so we must adjust our max date by this delta.
- */
 static PyObject*
 PyRecurrence_get_spawns(PyRecurrence *self, PyObject *end_date)
 {
-    Transaction *current_ref = &self->schedule.ref;
     time_t end = pydate2time(end_date);
-    time_t start = current_ref->date;
-    int incsize = 0;
-    time_t global_date_delta = 0;
-
-    GHashTableIter iter;
-    gpointer key, value;
-    g_hash_table_iter_init(&iter, self->schedule.deletions);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        if ((time_t)key > end) {
-            end = (time_t)key;
-        }
+    GSList *spawns = schedule_get_spawns(&self->schedule, end);
+    PyObject *res = PyList_New(0);
+    GSList *iter = spawns;
+    while (iter) {
+        PyTransaction *spawn = _PyTransaction_from_txn(iter->data);
+        spawn->owned = true; // we own the spawn
+        PyList_Append(res, (PyObject *)spawn);
+        iter = g_slist_next(iter);
     }
-    g_hash_table_iter_init(&iter, self->schedule.globalchanges);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        time_t rd = (time_t)key;
-        time_t vd = ((Transaction *)value)->date;
-        if (vd < rd) {
-            end += (rd - vd);
-        }
-    }
-    if ((self->schedule.stop > 0) && (end > self->schedule.stop)) {
-        end = self->schedule.stop;
-    }
-    PyObject *spawns = PyList_New(0);
-    while (true) {
-        time_t date = inc_date(start, self->schedule.type, incsize);
-        incsize += self->schedule.every;
-        if (date == -1) {
-            continue;
-        }
-        if (date > end) {
-            break;
-        }
-        Transaction *txn = g_hash_table_lookup(
-            self->schedule.globalchanges, (gpointer)date);
-        if (txn != NULL) {
-            current_ref = txn;
-            global_date_delta = current_ref->date - date;
-        }
-        // if txn != NULL, this schedule period is deleted
-        if (!schedule_is_deleted_at(&self->schedule, date)) {
-            time_t spawn_date = date + global_date_delta;
-            PyTransaction *spawn = _PyRecurrence_spawn(current_ref, date, spawn_date);
-            PyList_Append(spawns, (PyObject *)spawn);
-        }
-    }
-    return spawns;
+    // We free the slist, but not the spawns.
+    g_slist_free(spawns);
+    return res;
 }
 
 static PyObject*
