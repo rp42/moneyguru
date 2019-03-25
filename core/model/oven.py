@@ -5,9 +5,6 @@
 # http://www.gnu.org/licenses/gpl-3.0.html
 
 from datetime import date
-from operator import attrgetter
-
-from core.util import flatten
 
 from ._ccore import oven_cook_txns
 
@@ -76,19 +73,9 @@ class Oven:
         else:
             self.transactions = [t for t in self.transactions if t.date < from_date]
         # Cook
-        if self._scheduled is not None:
-            spawns = flatten(recurrence.get_spawns(until_date) for recurrence in self._scheduled)
-            # To ensure that our sort order stay correct and consistent, we assign position values
-            # to our spawns. To ensure that there's no overlap, we start our position counter at
-            # len(transactions)
-            for counter, spawn in enumerate(spawns, start=len(self._transactions)):
-                spawn.position = counter
-        else:
-            spawns = []
-        txns = list(self._transactions) + spawns
-        tocook = [t for t in txns if from_date <= t.date <= until_date]
-        tocook.sort(key=attrgetter('date'))
-        oven_cook_txns(self._accounts, tocook)
-        self.transactions += tocook
+        cooked = oven_cook_txns(
+            self._accounts, self._transactions, self._scheduled or [],
+            from_date, until_date)
+        self.transactions += cooked
         self._cooked_until = until_date
 
