@@ -11,16 +11,6 @@ typedef enum {
     REPEAT_WEEKDAY_LAST = 6,
 } RepeatType;
 
-typedef struct {
-    // date at which the recurrence starts
-    time_t start;
-    // date at which the recurrence stops. 0 if never.
-    time_t stop;
-    RepeatType type;
-    // Repeats every X units of `type`.
-    int every;
-} Recurrence;
-
 /* Increment `date` by `count` units of `repeat_type`.
  *
  * `count` can be negative.
