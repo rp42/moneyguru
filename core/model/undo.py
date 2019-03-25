@@ -117,7 +117,6 @@ class Undoer:
             newold = schedule.ref.replicate()
             schedule.ref.copy_from(old.ref)
             old.ref.copy_from(newold)
-            schedule.reset_spawn_cache()
 
     def _do_deletes(self, accounts, schedules):
         for schedule in schedules:

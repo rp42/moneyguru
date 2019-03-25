@@ -605,7 +605,6 @@ class Document(GUIObject):
             stop_date=stop_date,
             repeat_type=repeat_type,
             repeat_every=repeat_every)
-        schedule.reset_spawn_cache()
         if schedule not in self.schedules:
             self.schedules.append(schedule)
         self._cook(from_date=min_date)
