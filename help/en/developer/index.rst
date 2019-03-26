@@ -25,4 +25,3 @@ Contents
    devprocess
    architecture
    refactorings
-   core/index
