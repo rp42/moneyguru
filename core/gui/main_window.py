@@ -13,9 +13,8 @@ from core.trans import tr
 
 from ..const import PaneType, FilterType
 from ..exception import OperationAborted, FileFormatError
-from ..model._ccore import inc_date
+from ..model._ccore import inc_date, Recurrence
 from ..model.date import RepeatType, DateFormat
-from ..model.recurrence import Recurrence
 from ..model.transaction import txn_matches
 from ..loader import csv, qif, ofx, native
 from .base import DocumentGUIObject

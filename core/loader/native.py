@@ -10,10 +10,9 @@ import xml.etree.cElementTree as ET
 from core.util import tryint
 
 from ..exception import FileFormatError
-from ..model._ccore import Transaction
+from ..model._ccore import Transaction, Recurrence
 from ..model.date import RepeatType
 from ..model.oven import Oven
-from ..model.recurrence import Recurrence
 from . import base
 
 

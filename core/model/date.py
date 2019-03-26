@@ -457,6 +457,30 @@ class RepeatType:
             return cls.Monthly
 
 
+def get_repeat_type_desc(repeat_type, start_date):
+    res = {
+        RepeatType.Daily: tr('Daily'),
+        RepeatType.Weekly: tr('Weekly'),
+        RepeatType.Monthly: tr('Monthly'),
+        RepeatType.Yearly: tr('Yearly'),
+        RepeatType.Weekday: '', # dynamic
+        RepeatType.WeekdayLast: '', # dynamic
+    }[repeat_type]
+    if res:
+        return res
+    date = start_date
+    weekday_name = date.strftime('%A')
+    if repeat_type == RepeatType.Weekday:
+        week_no = (date.day - 1) // 7
+        position = [tr('first'), tr('second'), tr('third'), tr('fourth'), tr('fifth')][week_no]
+        return tr('Every %s %s of the month') % (position, weekday_name)
+    elif repeat_type == RepeatType.WeekdayLast:
+        _, days_in_month = monthrange(date.year, date.month)
+        if days_in_month - date.day < 7:
+            return tr('Every last %s of the month') % weekday_name
+        else:
+            return ''
+
 # --- Date Formatting
 # For the functions below, the format used is a subset of the Unicode format type
 # http://unicode.org/reports/tr35/tr35-6.html#Date_Format_Patterns

@@ -6,12 +6,13 @@
 
 from datetime import date
 
-from core.model.recurrence import get_repeat_type_desc
+from core.model.date import get_repeat_type_desc
 from core.util import first
 from core.trans import tr
 
 from ..exception import OperationAborted
-from ..model.recurrence import Recurrence, RepeatType
+from ..model._ccore import Recurrence
+from ..model.date import RepeatType
 from ..model.transaction import Transaction
 from .selectable_list import LinkedSelectableList
 from .transaction_panel import PanelWithTransaction

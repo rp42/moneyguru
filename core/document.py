@@ -25,7 +25,6 @@ from .model.currency import Currencies
 from .model.date import YearRange
 from .model.oven import Oven
 from .model.undo import Undoer, Action
-from .model.recurrence import find_schedule_of_spawn
 from .saver.native import save as save_native
 
 EXCLUDED_ACCOUNTS_PREFERENCE = 'ExcludedAccounts'
@@ -46,6 +45,9 @@ def handle_abort(method):
             pass
 
     return wrapper
+
+def find_schedule_of_spawn(spawn, schedules):
+    return first(s for s in schedules if s.contains_spawn(spawn))
 
 class Document(GUIObject):
     """Manages everything (including views) about an opened document.
