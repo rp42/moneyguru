@@ -4,8 +4,6 @@
 # which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-from ._ccore import Transaction as _Transaction
-
 def txn_matches(txn, query):
     """Return whether ``txn`` is matching ``query``.
 
@@ -77,6 +75,3 @@ def splitted_splits(splits):
         tos.append(null_amounts.pop())
     froms += null_amounts
     return froms, tos
-
-def Transaction(date, description=None, payee=None, checkno=None, account=None, amount=None):
-    return _Transaction(date, description, payee, checkno, account, amount)

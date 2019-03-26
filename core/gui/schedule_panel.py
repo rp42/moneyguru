@@ -11,9 +11,8 @@ from core.util import first
 from core.trans import tr
 
 from ..exception import OperationAborted
-from ..model._ccore import Recurrence
+from ..model._ccore import Recurrence, Transaction
 from ..model.date import RepeatType
-from ..model.transaction import Transaction
 from .selectable_list import LinkedSelectableList
 from .transaction_panel import PanelWithTransaction
 

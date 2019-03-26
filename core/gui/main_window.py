@@ -15,8 +15,8 @@ from ..const import PaneType, FilterType
 from ..exception import OperationAborted, FileFormatError
 from ..model._ccore import inc_date, Recurrence
 from ..model.date import RepeatType, DateFormat
-from ..model.transaction import txn_matches
 from ..loader import csv, qif, ofx, native
+from .util import txn_matches
 from .base import DocumentGUIObject
 from .search_field import SearchField
 from .date_range_selector import DateRangeSelector

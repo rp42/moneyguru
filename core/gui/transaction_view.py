@@ -9,13 +9,13 @@ import weakref
 from core.trans import tr
 from ..const import PaneType, FilterType, AccountType
 from ..model._ccore import amount_convert
-from ..model.transaction import txn_matches
 from .base import BaseView
 from .filter_bar import FilterBar
 from .mass_edition_panel import MassEditionPanel
 from .transaction_table import TransactionTable
 from .transaction_print import TransactionPrint
 from .transaction_panel import TransactionPanel
+from .util import txn_matches
 
 
 class TransactionViewBase(BaseView):

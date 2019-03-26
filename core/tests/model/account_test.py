@@ -9,12 +9,11 @@ from datetime import date
 from ..testutil import eq_
 
 from ...const import AccountType
-from ...model._ccore import AccountList, TransactionList
+from ...model._ccore import AccountList, TransactionList, Transaction
 from ...model.sort import ACCOUNT_SORT_KEY
 from ...model.currency import Currencies
 from ...model.date import MonthRange
 from ...model.oven import Oven
-from ...model.transaction import Transaction
 from ..base import Amount
 
 class TestAccountComparison:

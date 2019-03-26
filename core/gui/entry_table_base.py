@@ -10,9 +10,8 @@ from operator import attrgetter
 from core.util import nonone
 from core.trans import tr
 
-from ..model._ccore import Entry, amount_convert
+from ..model._ccore import Entry, amount_convert, Transaction
 from ..model.date import ONE_DAY
-from ..model.transaction import Transaction
 from .table import Row, RowWithDebitAndCreditMixIn, RowWithDateMixIn, rowattr
 from .transaction_table_base import TransactionTableBase
 

@@ -7,11 +7,11 @@
 import datetime
 
 from core.model.date import get_repeat_type_desc
-from core.model.transaction import splitted_splits
 from core.trans import trget, tr
 from .column import Column
 from ..model._ccore import amount_convert
 from .table import GUITable, Row, rowattr, TableWithAmountMixin
+from .util import splitted_splits
 
 trcol = trget('columns')
 

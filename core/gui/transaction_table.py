@@ -7,13 +7,12 @@
 import datetime
 from operator import attrgetter
 
-from core.model.transaction import splitted_splits
 from core.trans import trget, tr
 from .column import Column
-from ..model._ccore import amount_convert
-from ..model.transaction import Transaction
+from ..model._ccore import amount_convert, Transaction
 from .table import Row, RowWithDateMixIn, rowattr
 from .transaction_table_base import TransactionTableBase
+from .util import splitted_splits
 
 trcol = trget('columns')
 

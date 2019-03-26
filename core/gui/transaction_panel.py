@@ -10,8 +10,7 @@ from datetime import date
 from core.util import first
 
 from ..const import AccountType
-from ..model._ccore import AccountList
-from ..model.transaction import Transaction
+from ..model._ccore import AccountList, Transaction
 from .base import GUIPanel
 from .split_table import SplitTable
 from .completable_edit import CompletableEdit

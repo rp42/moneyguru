@@ -1902,13 +1902,18 @@ PyTransaction_materialize(PyTransaction *self, PyObject *noarg)
 static int
 PyTransaction_init(PyTransaction *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *date_p, *description, *payee, *checkno, *account_p, *amount_p;
+    PyObject *date_p;
+    PyObject *description = Py_None;
+    PyObject *payee = Py_None;
+    PyObject *checkno = Py_None;
+    PyObject *account_p = Py_None;
+    PyObject *amount_p = Py_None;
 
     static char *kwlist[] = {"date", "description", "payee", "checkno",
         "account", "amount", NULL};
 
     int res = PyArg_ParseTupleAndKeywords(
-        args, kwds, "OOOOOO", kwlist, &date_p, &description, &payee,
+        args, kwds, "O|OOOOO", kwlist, &date_p, &description, &payee,
         &checkno, &account_p, &amount_p);
     if (!res) {
         return -1;
