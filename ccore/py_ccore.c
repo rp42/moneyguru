@@ -1264,6 +1264,7 @@ PySplit_repr(PySplit *self)
     args = Py_BuildValue(
         "(Ois)", aname, self->split->amount.val,
         self->split->amount.currency->code);
+    Py_DECREF(aname);
     fmt = PyUnicode_FromString("Split(%r Amount(%r, %r))");
     r = PyUnicode_Format(fmt, args);
     Py_DECREF(fmt);
@@ -1954,6 +1955,9 @@ PyTransaction_dealloc(PyTransaction *self)
          * don't for the same reason we don't deallocate Account in AccountList:
          * the Undoer. See account.c for details.
          */
+        // TODO: free spawns. They should be safe to free. In quick tests I've
+        // made, only one test fails, undo-related. Should be easy to figure
+        // out.
         /*transaction_deinit(self->txn);*/
         /*free(self->txn);              */
     }
@@ -2251,8 +2255,12 @@ PyEntryList_balance(PyEntryList *self, PyObject *args)
 static bool
 _PyEntryList_cash_flow(PyEntryList *self, Amount *dst, PyObject *daterange)
 {
-    time_t from = pydate2time(PyObject_GetAttrString(daterange, "start"));
-    time_t to = pydate2time(PyObject_GetAttrString(daterange, "end"));
+    PyObject *start_py = PyObject_GetAttrString(daterange, "start");
+    time_t from = pydate2time(start_py);
+    Py_DECREF(start_py);
+    PyObject *end_py = PyObject_GetAttrString(daterange, "end");
+    time_t to = pydate2time(end_py);
+    Py_DECREF(end_py);
     if (from == -1 || to == -1) {
         return false;
     }
@@ -2341,6 +2349,7 @@ PyEntryList_iter(PyEntryList *self)
     PyObject *list = PyList_New(self->entries->count);
     for (int i=0; i<self->entries->count; i++) {
         Entry *entry = self->entries->entries[i];
+        // stolen
         PyList_SetItem(list, i, (PyObject *)_PyEntry_from_entry(entry));
     }
     PyObject *res = PyObject_GetIter(list);
@@ -2537,7 +2546,9 @@ PyAccountList_filter(PyAccountList *self, PyObject *args, PyObject *kwds)
         if (type >= 0 && (int)a->type != type) {
             continue;
         }
-        PyList_Append(res, (PyObject *)_PyAccount_from_account(a));
+        PyAccount *a_py = _PyAccount_from_account(a);
+        PyList_Append(res, (PyObject *)a_py);
+        Py_DECREF(a_py);
     }
     return res;
 }
@@ -2669,6 +2680,7 @@ PyAccountList_iter(PyAccountList *self)
     PyObject *tmplist = PyList_New(self->alist.count);
     for (int i=0; i<self->alist.count; i++) {
         Account *a = self->alist.accounts[i];
+        // stolen
         PyList_SetItem(tmplist, i, (PyObject *)_PyAccount_from_account(a));
     }
     PyObject *res = PyObject_GetIter(tmplist);
@@ -2878,6 +2890,7 @@ PyRecurrence_affected_accounts(PyRecurrence *self)
     while (g_hash_table_iter_next(&iter, &key, &value)) {
         PyTransaction *txn_py = _PyTransaction_from_txn((Transaction *)value);
         PyObject *affected = PyTransaction_affected_accounts(txn_py);
+        Py_DECREF(txn_py);
         Py_DECREF(PyNumber_InPlaceOr(res, affected));
     }
     return res;
@@ -2886,10 +2899,11 @@ PyRecurrence_affected_accounts(PyRecurrence *self)
 static PyObject *
 PyRecurrence_reassign_account(PyRecurrence *self, PyObject *args)
 {
-    PyTransaction *txn = _PyTransaction_from_txn(&self->schedule.ref);
-    if (PyTransaction_reassign_account(txn, args) == NULL) {
+    PyTransaction *txn_py = _PyTransaction_from_txn(&self->schedule.ref);
+    if (PyTransaction_reassign_account(txn_py, args) == NULL) {
         return NULL;
     }
+    Py_DECREF(txn_py);
     GHashTableIter iter;
     gpointer key, value;
     g_hash_table_iter_init(&iter, self->schedule.globalchanges);
@@ -2898,6 +2912,7 @@ PyRecurrence_reassign_account(PyRecurrence *self, PyObject *args)
         if (PyTransaction_reassign_account(txn_py, args) == NULL) {
             return NULL;
         }
+        Py_DECREF(txn_py);
     }
     Py_RETURN_NONE;
 }
@@ -3015,7 +3030,13 @@ py_oven_cook_txns(PyObject *self, PyObject *args)
     // generate spawns to add to txns list
     Py_ssize_t len = PySequence_Length(schedules);
     for (int i=0; i<len; i++) {
+        // borrowed
         PyRecurrence *rec = (PyRecurrence *)PyList_GetItem(schedules, i);
+        // we have ownership of all those spawns here. We'll manage them in a
+        // split way: spawns that don't belong in `filtered` are freed right
+        // away. spawns that do belong in `filtered` will end up in *owned*
+        // PyTransaction instances (we take care of this in the following
+        // main loop).
         GSList *spawns = schedule_get_spawns(&rec->schedule, until);
         GSList *iter = spawns;
         while (iter) {
@@ -3040,15 +3061,14 @@ py_oven_cook_txns(PyObject *self, PyObject *args)
     while (!g_sequence_iter_is_end(iter1)) {
         Transaction *txn = g_sequence_get(iter1);
         PyTransaction *txn_py = _PyTransaction_from_txn(txn);
+        int pos = g_sequence_iter_get_position(iter1);
         if (txn->type == TXN_TYPE_RECURRENCE) {
             // Spawns are owned: get_spawns gives us txns that we own.
             txn_py->owned = true;
-        }
-        int pos = g_sequence_iter_get_position(iter1);
-        if (txn->type == TXN_TYPE_RECURRENCE) {
             txn->position = pos;
         }
-        PyList_SetItem(cooked, pos, (PyObject *)txn_py); // steals txn_py
+        // stolen
+        PyList_SetItem(cooked, pos, (PyObject *)txn_py);
         int slen = txn->splitcount;
         for (int j=0; j<slen; j++) {
             Split *split = &txn->splits[j];
@@ -3172,6 +3192,7 @@ PyTransactionList_account_names(PyTransactionList *self)
         iter++;
     }
     free(account_names);
+    Py_XDECREF(self->account_names);
     self->account_names = res;
     Py_INCREF(self->account_names);
     return res;
@@ -3255,6 +3276,7 @@ PyTransactionList_descriptions(PyTransactionList *self)
         iter++;
     }
     free(descs);
+    Py_XDECREF(self->descriptions);
     self->descriptions = res;
     Py_INCREF(self->descriptions);
     return res;
@@ -3298,6 +3320,7 @@ PyTransactionList_payees(PyTransactionList *self)
         iter++;
     }
     free(payees);
+    Py_XDECREF(self->payees);
     self->payees = res;
     Py_INCREF(self->payees);
     return res;
@@ -3404,6 +3427,7 @@ PyTransactionList_iter(PyTransactionList *self)
 {
     PyObject *list = PyList_New(self->tlist.count);
     for (unsigned int i=0; i<self->tlist.count; i++) {
+        // stolen
         PyList_SetItem(
             list, i, (PyObject *)_PyTransaction_from_txn(self->tlist.txns[i]));
     }
@@ -3438,6 +3462,7 @@ _pyseq2accounts(PyObject *seq)
     res = malloc(sizeof(Account*) * (len + 1));
     PyObject *fast = PySequence_Fast(seq, "");
     for (int i=0; i<len; i++) {
+        // borrowed
         res[i] = ((PyAccount *)PySequence_Fast_GET_ITEM(fast, i))->account;
     }
     res[len] = NULL;
@@ -3453,6 +3478,7 @@ _pyseq2txns(PyObject *seq)
     res = malloc(sizeof(Transaction*) * (len + 1));
     PyObject *fast = PySequence_Fast(seq, "");
     for (int i=0; i<len; i++) {
+        // borrowed
         res[i] = ((PyTransaction *)PySequence_Fast_GET_ITEM(fast, i))->txn;
     }
     res[len] = NULL;
@@ -3468,6 +3494,7 @@ _pyseq2scheds(PyObject *seq)
     res = malloc(sizeof(Schedule*) * (len + 1));
     PyObject *fast = PySequence_Fast(seq, "");
     for (int i=0; i<len; i++) {
+        // borrowed
         res[i] = &(((PyRecurrence *)PySequence_Fast_GET_ITEM(fast, i))->schedule);
     }
     res[len] = NULL;
