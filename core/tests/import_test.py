@@ -9,9 +9,9 @@ from datetime import date
 from pytest import raises
 
 from core.const import AccountType
-from .testutil import eq_
+from .testutil import eq_, with_app
 
-from .base import ApplicationGUI, TestApp, with_app, testdata
+from .base import ApplicationGUI, TestApp, testdata
 from ..app import Application
 from ..exception import FileFormatError
 from ..loader.csv import CsvField

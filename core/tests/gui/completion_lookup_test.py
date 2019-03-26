@@ -1,14 +1,12 @@
-# Created By: Virgil Dupras
-# Created On: 2010-03-04
-# Copyright 2015 Hardcoded Software (http://www.hardcoded.net)
-# 
-# This software is licensed under the "GPLv3" License as described in the "LICENSE" file, 
-# which should be included with this package. The terms are also available at 
+# Copyright 2019 Virgil Dupras
+#
+# This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
+# which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
-from ..base import TestApp, with_app
+from ..base import TestApp
 
 def app_default():
     app = TestApp()
@@ -38,7 +36,7 @@ def test_ignore_accents_in_lookups(app):
     eq_(app.clookup.names, ['payée'])
     app.clookup.search_query = 'ée'
     eq_(app.clookup.names, ['payée'])
-    
+
 @with_app(app_default)
 def test_lookup_lists_descriptions(app):
     # The lookup, when the edit is empty, show values in alphabetical order
@@ -61,7 +59,7 @@ def test_lookup_with_non_empty_edit(app):
     eq_(app.clookup.search_query, 'b')
     eq_(app.clookup.names, ['bar', 'Bazooka', 'buz'])
     app.clookup.go()
-    eq_(app.ce.completion, '')    
+    eq_(app.ce.completion, '')
 
 @with_app(app_default)
 def test_select_name_then_go(app):

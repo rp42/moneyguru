@@ -8,10 +8,10 @@ from datetime import date
 
 import pytest
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
 from ...model.currency import Currencies
-from ..base import TestApp, with_app
+from ..base import TestApp
 
 # --- Pristine
 def test_can_load():

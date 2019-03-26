@@ -9,9 +9,9 @@ import os
 from datetime import date
 
 from pytest import raises
-from .testutil import eq_
+from .testutil import eq_, with_app
 
-from .base import ApplicationGUI, TestApp, with_app, testdata
+from .base import ApplicationGUI, TestApp, testdata
 from ..app import Application
 from ..document import Document, AUTOSAVE_BUFFER_COUNT
 from ..exception import FileFormatError

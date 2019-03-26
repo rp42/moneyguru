@@ -8,7 +8,7 @@ from datetime import date
 import threading
 import os.path as op
 
-from .testutil import eq_, log_calls
+from .testutil import eq_, log_calls, with_app
 
 import pytest
 
@@ -17,7 +17,7 @@ from ..model import currency
 from ..const import AccountType
 from ..model.currency import Currencies
 from ..model.date import MonthRange
-from .base import ApplicationGUI, TestApp, with_app, compare_apps
+from .base import ApplicationGUI, TestApp, compare_apps
 from .model.currency_test import set_ratedb_for_tests
 
 

@@ -22,7 +22,6 @@ from ..model._ccore import amount_parse
 from ..model.date import DateFormat
 from ..util import flatten
 from .testutil import eq_, CallLogger, TestApp as TestAppBase, TestData
-from .testutil import with_app # noqa
 
 testdata = TestData(op.join(op.dirname(__file__), 'testdata'))
 
@@ -555,17 +554,6 @@ class TestApp(TestAppBase):
     def transaction_descriptions(self):
         return [row.description for row in self.ttable.rows]
 
-    def set_plugins(self, plugins):
-        # Changes the list of currently active plugins in `self.app` to `plugins`.
-        class bag: pass
-        fakemod = bag()
-        for index, plugin in enumerate(plugins):
-            setattr(fakemod, 'plugin%d' % index, plugin)
-            plugin.ENABLED_BY_DEFAULT = True
-        self.app.plugins = []
-        self.app._load_plugin_module(fakemod)
-        self.app._hook_currency_providers()
-
     # --- Shortcut for selecting a view type.
     def current_view(self):
         return self.mw.pane_view(self.mw.current_pane_index)
@@ -645,16 +633,13 @@ class TestApp(TestAppBase):
 
 def compare_apps(first, second, qif_mode=False):
     def compare_txns(txn1, txn2):
-        try: # XXX Why is there a try/except here? To catch silently some exeptions?
-            eq_(txn1.date, txn2.date)
-            eq_(txn1.description, txn2.description)
-            eq_(txn1.payee, txn2.payee)
-            eq_(txn1.checkno, txn2.checkno)
-            if not qif_mode:
-                eq_(txn1.notes, txn2.notes)
-            eq_(len(txn1.splits), len(txn2.splits))
-        except AssertionError:
-            raise
+        eq_(txn1.date, txn2.date)
+        eq_(txn1.description, txn2.description)
+        eq_(txn1.payee, txn2.payee)
+        eq_(txn1.checkno, txn2.checkno)
+        if not qif_mode:
+            eq_(txn1.notes, txn2.notes)
+        eq_(len(txn1.splits), len(txn2.splits))
         splits1 = txn1.splits
         splits2 = txn2.splits
         splits1.sort(key=lambda s: getattr(s.account, 'name', ''))

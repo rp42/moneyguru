@@ -1,24 +1,22 @@
-# Created By: Virgil Dupras
-# Created On: 2008-07-21
-# Copyright 2015 Hardcoded Software (http://www.hardcoded.net)
-# 
-# This software is licensed under the "GPLv3" License as described in the "LICENSE" file, 
-# which should be included with this package. The terms are also available at 
+# Copyright 2019 Virgil Dupras
+#
+# This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
+# which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
 from ...const import PaneType
-from ..base import TestApp, with_app
+from ..base import TestApp
 
 # --- Pristine
-@with_app(TestApp)    
+@with_app(TestApp)
 def test_set_query(app):
     # Setting the 'query' property works"""
     app.sfield.text = 'foobar'
     eq_(app.sfield.text, 'foobar')
 
-@with_app(TestApp)    
+@with_app(TestApp)
 def test_set_query_selects_transaction_pane(app):
     # Setting the search query selects the transaction tab specifically. Previously, the tab that
     # was selected was always the 3rd one, regardless of the type.
@@ -173,13 +171,13 @@ def app_split():
     app.add_txn_with_splits(splits)
     return app
 
-@with_app(app_split)    
+@with_app(app_split)
 def test_query_memo(app):
     # memo fields are part of the search query
     app.sfield.text = 'memo2'
     eq_(app.ttable.row_count, 1)
 
-@with_app(app_split) 
+@with_app(app_split)
 def test_query_split_account(app):
     # Any account in a split can match a sfield query.
     app.sfield.text = 'third'

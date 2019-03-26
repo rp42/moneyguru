@@ -1,6 +1,4 @@
-# Created By: Virgil Dupras
-# Created On: 2008-06-18
-# Copyright 2015 Hardcoded Software (http://www.hardcoded.net)
+# Copyright 2019 Virgil Dupras
 #
 # This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
 # which should be included with this package. The terms are also available at

@@ -6,9 +6,9 @@
 
 from datetime import date
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
-from ..base import TestApp, with_app, testdata
+from ..base import TestApp, testdata
 from ...const import AccountType
 from ...model.currency import Currencies
 

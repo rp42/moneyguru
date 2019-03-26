@@ -6,9 +6,9 @@
 
 from datetime import date
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
-from ..base import TestApp, with_app, DictLoader, testdata
+from ..base import TestApp, DictLoader, testdata
 from ...model.date import YearRange
 from ...gui.import_window import SwapType
 

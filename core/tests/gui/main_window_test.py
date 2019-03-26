@@ -6,9 +6,9 @@
 
 from datetime import date
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
-from ..base import TestApp, with_app
+from ..base import TestApp
 from ...const import PaneType, PaneArea, AccountType
 from ...model.date import YearRange
 

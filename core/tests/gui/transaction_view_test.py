@@ -1,4 +1,4 @@
-# Copyright 2018 Virgil Dupras
+# Copyright 2019 Virgil Dupras
 #
 # This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
 # which should be included with this package. The terms are also available at
@@ -6,10 +6,10 @@
 
 from datetime import date
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
 from ...model.currency import Currencies
-from ..base import TestApp, with_app
+from ..base import TestApp
 
 # --- three transactions
 def app_three_transactions():

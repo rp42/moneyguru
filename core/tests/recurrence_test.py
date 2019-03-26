@@ -4,17 +4,17 @@
 # which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-from .testutil import eq_
+from .testutil import eq_, with_app
 
 from ..const import PaneType
 from ..document import ScheduleScope
-from .base import TestApp, with_app
+from .base import TestApp
 
 # --- Pristine
-@with_app(TestApp)
-def test_schedule_with_eralier_stop_date(app):
+def test_schedule_with_eralier_stop_date():
     # A schedule with a stop date that is earlier than its start date is never supposed to produce
     # a spawn.
+    app = TestApp()
     app.add_schedule(start_date='13/09/2008', description='foobar', stop_date='12/09/2008')
     app.navigate_to_date(2008, 9, 13)
     tview = app.show_tview()

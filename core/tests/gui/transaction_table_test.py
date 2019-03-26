@@ -10,9 +10,9 @@ from io import StringIO
 
 import pytest
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
-from ..base import TestApp, with_app, testdata
+from ..base import TestApp, testdata
 from ...const import PaneType
 from ...gui.transaction_table import TransactionTable
 from ...model.date import MonthRange, YearRange

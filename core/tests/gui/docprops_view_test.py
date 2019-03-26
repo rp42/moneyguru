@@ -6,10 +6,10 @@
 
 from datetime import date
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
 from ...model.date import MonthRange
-from ..base import TestApp, with_app
+from ..base import TestApp
 
 # ---
 def app_props_shown():

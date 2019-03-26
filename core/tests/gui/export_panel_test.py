@@ -6,11 +6,11 @@
 
 import csv
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
 from ...gui.export_panel import ExportFormat
 from ...const import AccountType
-from ..base import TestApp, with_app
+from ..base import TestApp
 
 # ---
 @with_app(TestApp)

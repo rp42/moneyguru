@@ -10,12 +10,12 @@ from datetime import date
 
 import pytest
 
-from .testutil import eq_
+from .testutil import eq_, with_app
 
 from ..const import PaneType
 from ..document import ScheduleScope
 from ..model.date import MonthRange
-from .base import compare_apps, testdata, TestApp, with_app
+from .base import compare_apps, testdata, TestApp
 
 class bag: pass
 

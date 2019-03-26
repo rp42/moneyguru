@@ -4,15 +4,15 @@
 # which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-from .testutil import eq_
+from .testutil import eq_, with_app
 
-from .base import TestApp, with_app, compare_apps
+from .base import TestApp, compare_apps
 from ..const import AccountType
 
 # --- Pristine
-@with_app(TestApp)
-def test_reconciliation_mode(app):
+def test_reconciliation_mode():
     #Toggling reconciliation mode on and off
+    app = TestApp()
     app.add_account('foo')
     app.show_account()
     app.clear_gui_calls()

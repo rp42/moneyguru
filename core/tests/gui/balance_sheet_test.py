@@ -8,9 +8,9 @@ from datetime import date
 import csv
 from io import StringIO
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
-from ..base import DocumentGUI, ApplicationGUI, TestApp, with_app, testdata
+from ..base import DocumentGUI, ApplicationGUI, TestApp, testdata
 from ...app import Application
 from ...document import Document
 from ...const import AccountType

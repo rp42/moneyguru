@@ -12,10 +12,10 @@ on the active view. See :meth:`MainWindow.show_account` for details.
 This unit regroups tests for all active view scenarios.
 """
 
-from .testutil import eq_
+from .testutil import eq_, with_app
 
 from ..const import PaneType, AccountType
-from .base import TestApp, with_app
+from .base import TestApp
 
 # ---
 def test_show_transfer_account_on_empty_row_does_nothing():

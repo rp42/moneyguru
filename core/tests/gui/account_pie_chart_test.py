@@ -6,9 +6,9 @@
 
 from datetime import date
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
-from ..base import ApplicationGUI, TestApp, with_app
+from ..base import ApplicationGUI, TestApp
 from ...app import Application
 from ...gui.pie_chart import MIN_SLICE_COUNT, MIN_VIEW_SIZE, SIZE_COST_FOR_SLICE, COLOR_COUNT
 from ...const import AccountType

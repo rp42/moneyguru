@@ -1,14 +1,12 @@
-# Created By: Virgil Dupras
-# Created On: 2009-04-05
-# Copyright 2015 Hardcoded Software (http://www.hardcoded.net)
-# 
-# This software is licensed under the "GPLv3" License as described in the "LICENSE" file, 
-# which should be included with this package. The terms are also available at 
+# Copyright 2019 Virgil Dupras
+#
+# This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
+# which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-from ..testutil import eq_
+from ..testutil import eq_, with_app
 
-from ..base import TestApp, with_app
+from ..base import TestApp
 from ...gui.transaction_print import EntryPrint
 
 # --- Some account
@@ -70,7 +68,7 @@ def app_entry_in_previous_range():
     app.pv = EntryPrint(app.aview)
     return app
 
-@with_app(app_entry_in_previous_range)    
+@with_app(app_entry_in_previous_range)
 def test_split_count_of_previous_balance_entry(app):
     # For the "Previous Balance" entry, return 0, don't crash
     eq_(app.pv.split_count_at_row(0), 0)

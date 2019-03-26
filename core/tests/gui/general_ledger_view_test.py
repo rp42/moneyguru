@@ -7,7 +7,7 @@
 from ..testutil import eq_
 
 from ...const import AccountType
-from ..base import TestApp, with_app
+from ..base import TestApp
 
 # ---
 def app_two_txns():
@@ -19,17 +19,16 @@ def app_two_txns():
     app.show_glview()
     return app
 
-@with_app(app_two_txns)
-def test_totals_one_selected(app):
+def test_totals_one_selected():
     # the totals line shows totals for selected entries
-    print(len(app.gltable))
+    app = app_two_txns()
     app.gltable.select([1])
     expected = "1 out of 4 selected. Debit: 0.00 Credit: 42.00"
     eq_(app.mw.status_line, expected)
 
-@with_app(app_two_txns)
-def test_totals_four_selected(app):
+def test_totals_four_selected():
     # the totals line shows totals for selected entries
+    app = app_two_txns()
     app.gltable.select([1, 2, 5, 6])
     expected = "4 out of 4 selected. Debit: 54.00 Credit: 54.00"
     eq_(app.mw.status_line, expected)

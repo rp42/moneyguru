@@ -6,11 +6,11 @@
 
 # Tests that make sure preferences are correctly saved/restored
 
-from .testutil import eq_
+from .testutil import eq_, with_app
 
 from ..const import PaneType, PaneArea
 from ..gui.main_window import Preference
-from .base import TestApp, with_app, testdata
+from .base import TestApp, testdata
 
 # --- Pristine
 @with_app(TestApp)
