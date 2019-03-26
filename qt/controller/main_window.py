@@ -626,7 +626,7 @@ class MainWindow(QMainWindow):
 
     def importDocument(self):
         title = tr("Select a document to import")
-        filters = tr("Supported files (*.moneyguru *.ofx *.qfx *.qif *.csv *.txt)")
+        filters = tr("Supported files (*.moneyguru *.ofx *.qfx *.qif *.csv *.txt);;All files (*)")
         docpath, filetype = QFileDialog.getOpenFileName(self.app.mainWindow, title, '', filters)
         # There's a strange glitch under GNOME where, right after the dialog is gone, the main
         # window isn't the active window, but it will become active if we give it enough time. If we
