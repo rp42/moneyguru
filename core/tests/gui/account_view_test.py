@@ -7,6 +7,7 @@
 from ..testutil import eq_, with_app
 
 from ...const import AccountType
+from ...model._ccore import amount_configure
 from ..base import TestApp
 
 # --- Two entries
@@ -37,7 +38,7 @@ def test_totals_with_unicode_amount_format(app):
     # UnicodeEncodeError in the status line formatting.
     # Since the C rewrite of format_amount, we don't support multi-byte decimal
     # sep. When that happens, it's replaced by the default value.
-    app.app._decimal_sep = '\xa0'
+    amount_configure('\xa0', ',')
     app.show_tview() # force a refresh
     app.show_aview()
     expected = "1 out of 2 selected. Increase: 0.00 Decrease: 12.00"

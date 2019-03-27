@@ -722,32 +722,20 @@ py_amount_format(PyObject *self, PyObject *args, PyObject *kwds)
     const char *zero_currency = "";
     int blank_zero = false;
     bool show_currency = false;
-    const char *decimal_sep = ".";
-    const char *grouping_sep = "";
     Currency *c = NULL;
     char result[64];
     static char *kwlist[] = {
-        "amount", "default_currency", "blank_zero", "zero_currency",
-        "decimal_sep", "grouping_sep", NULL};
+        "amount", "default_currency", "blank_zero", "zero_currency", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(
-        args, kwds, "O|spsss", kwlist, &pyamount, &default_currency,
-        &blank_zero, &zero_currency, &decimal_sep, &grouping_sep);
+        args, kwds, "O|sps", kwlist, &pyamount, &default_currency,
+        &blank_zero, &zero_currency);
     if (!rc) {
         return NULL;
     }
     if (pyamount == Py_None) {
         // special case, always blank
         blank_zero = true;
-    }
-
-    // We don't support (yet) multibyte decimal sep and grouping sep. Let's
-    // normalize that case.
-    if (strlen(decimal_sep) > 1) {
-        decimal_sep = ".";
-    }
-    if (strlen(grouping_sep) > 1) {
-        grouping_sep = " ";
     }
 
     Amount amount;
@@ -773,8 +761,7 @@ py_amount_format(PyObject *self, PyObject *args, PyObject *kwds)
         show_currency = amount.currency != NULL;
     }
     rc = amount_format(
-        result, &amount, show_currency, blank_zero, decimal_sep[0],
-        grouping_sep[0]);
+        result, &amount, show_currency, blank_zero);
     if (!rc) {
         PyErr_SetString(PyExc_ValueError, "something went wrong");
         return NULL;
@@ -828,6 +815,27 @@ py_amount_parse(PyObject *self, PyObject *args, PyObject *kwds)
         PyErr_SetString(PyExc_ValueError, "couldn't parse expression");
         return NULL;
     }
+}
+
+static PyObject*
+py_amount_configure(PyObject *self, PyObject *args)
+{
+    const char *decimal_sep;
+    const char *grouping_sep;
+    if (!PyArg_ParseTuple(args, "ss", &decimal_sep, &grouping_sep)) {
+        return NULL;
+    }
+    // We don't support (yet) multibyte decimal sep and grouping sep. Let's
+    // normalize that case.
+    if (strlen(decimal_sep) > 1) {
+        decimal_sep = ".";
+    }
+    if (strlen(grouping_sep) > 1) {
+        grouping_sep = " ";
+    }
+
+    amount_configure(decimal_sep[0], grouping_sep[0]);
+    Py_RETURN_NONE;
 }
 
 static PyObject*
@@ -3704,6 +3712,7 @@ PyType_Spec Entry_Type_Spec = {
 static PyMethodDef module_methods[] = {
     {"amount_format", (PyCFunction)py_amount_format, METH_VARARGS | METH_KEYWORDS},
     {"amount_parse", (PyCFunction)py_amount_parse, METH_VARARGS | METH_KEYWORDS},
+    {"amount_configure", (PyCFunction)py_amount_configure, METH_VARARGS},
     {"amount_convert", (PyCFunction)py_amount_convert, METH_VARARGS},
     {"currency_global_init", py_currency_global_init, METH_VARARGS},
     {"currency_global_reset_currencies", py_currency_global_reset_currencies, METH_NOARGS},

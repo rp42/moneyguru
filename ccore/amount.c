@@ -7,6 +7,8 @@
 #include "amount.h"
 
 static Amount g_zero = {0, NULL};
+static char g_decimal_sep = '\0';
+static char g_grouping_sep = '\0';
 
 /* Private */
 
@@ -135,11 +137,9 @@ amount_slide(int64_t val, uint8_t fromexp, uint8_t toexp)
 bool
 amount_format(
     char *dest,
-    Amount *amount,
+    const Amount *amount,
     bool with_currency,
-    bool blank_zero,
-    char decimal_sep,
-    char grouping_sep)
+    bool blank_zero)
 {
     int64_t val, left, right;
     int rc, seppos;
@@ -190,8 +190,8 @@ amount_format(
 
     left = val / pow(10, exp);
     right = val - (left * pow(10, exp));
-    if (grouping_sep != 0) {
-        rc = group_intfmt(dest, left, grouping_sep);
+    if (g_grouping_sep != 0) {
+        rc = group_intfmt(dest, left, g_grouping_sep);
     } else {
         rc = sprintf(dest, "%ld", left);
     }
@@ -206,7 +206,7 @@ amount_format(
     if (rc < 0) {
         return false;
     }
-    dest[seppos] = decimal_sep;
+    dest[seppos] = g_decimal_sep;
     dest[seppos + rc] = '\0';
     return true;
 }
@@ -659,4 +659,11 @@ amount_convert(Amount *dest, const Amount *src, time_t date)
         src->currency->exponent,
         dest->currency->exponent);
     return true;
+}
+
+void
+amount_configure(char decimal_sep, char grouping_sep)
+{
+    g_decimal_sep = decimal_sep;
+    g_grouping_sep = grouping_sep;
 }

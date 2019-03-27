@@ -12,6 +12,7 @@ from core.util import nonone
 from .gui.date_widget import DateWidget
 
 from .model import currency
+from .model._ccore import amount_configure
 from .model.currency import Currencies
 from .model.currency_provider import get_providers
 from .model.date import parse_date, format_date
@@ -105,8 +106,7 @@ class Application:
         currency.initialize_db(db_path)
         self._default_currency = default_currency
         self._date_format = date_format
-        self._decimal_sep = decimal_sep
-        self._grouping_sep = grouping_sep
+        amount_configure(decimal_sep, grouping_sep)
         self._autosave_interval = self.get_default(PreferenceNames.AutoSaveInterval, 10)
         self._auto_decimal_place = self.get_default(PreferenceNames.AutoDecimalPlace, False)
         self._day_first_date_entry = self.get_default(PreferenceNames.DayFirstDateEntry, True)

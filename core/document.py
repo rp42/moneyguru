@@ -849,10 +849,7 @@ class Document(GUIObject):
             default_currency = None
         else:
             default_currency = self.default_currency
-        return amount_format(
-            amount, default_currency or '', decimal_sep=self.app._decimal_sep,
-            grouping_sep=self.app._grouping_sep, **kwargs
-        )
+        return amount_format(amount, default_currency or '', **kwargs)
 
     def parse_amount(self, amount, default_currency=None, **kwargs):
         if default_currency is None:

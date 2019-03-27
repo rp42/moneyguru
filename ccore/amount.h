@@ -62,11 +62,9 @@ grouping_sep: the character to use as a grouping separator. set to 0 to disable
 bool
 amount_format(
     char *dest,
-    Amount *amount,
+    const Amount *amount,
     bool with_currency,
-    bool blank_zero,
-    char decimal_sep,
-    char grouping_sep);
+    bool blank_zero);
 
 /* Parse number in `s` and return its grouping separator
  *
@@ -116,7 +114,10 @@ amount_parse_currency(
  */
 bool
 amount_parse_single(
-    int64_t *dest, const char *s, uint8_t exponent, bool auto_decimal_place,
+    int64_t *dest,
+    const char *s,
+    uint8_t exponent,
+    bool auto_decimal_place,
     char grouping_sep);
 
 /* Parse simple math expressions involving amounts.
@@ -176,3 +177,10 @@ amount_parse(
  */
 bool
 amount_convert(Amount *dest, const Amount *src, time_t date);
+
+/* Configure parameters under which amounts are parsed/formatted
+ *
+ * These are saved globally.
+ */
+void
+amount_configure(char decimal_sep, char grouping_sep);
