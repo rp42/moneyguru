@@ -19,7 +19,7 @@ cp -rf qt "${D}${DESTLIB}"
 # copy all core except core/tests
 mkdir -p "${D}${DESTLIB}/core"
 cp -f core/*.py "${D}${DESTLIB}/core"
-cp -rf core/{model,gui,plugin,saver,loader,__pycache__} "${D}${DESTLIB}/core"
+cp -rf core/{model,gui,saver,loader,__pycache__} "${D}${DESTLIB}/core"
 mkdir -p "${D}${PREFIX}/share/applications"
 install -D -m644 support/moneyguru.desktop \
     "${D}${PREFIX}/share/applications/moneyguru.desktop"
