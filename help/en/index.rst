@@ -42,7 +42,7 @@ Contents:
    currencies
    cash
    reconciliation
-   forecast
+   schedule
    faq
    developer/index
    changelog

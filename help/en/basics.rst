@@ -24,7 +24,7 @@ There are 7 types of date ranges:
 #. **Month:** It starts on the first day of a month and ends on the last day of the same month.
 #. **Quarter:** It starts on the first day of a quarter (3 months) and ends on the last day of the same quarter.
 #. **Year:** It starts on the first day of a year and ends on the last day of the same year.
-#. **Year to date:** It starts on the first day of a *today's* year and ends *today*. Use this date range if you want moneyGuru to show you your current situation (without any budgeting or scheduled transactions) thrown in the mix.
+#. **Year to date:** It starts on the first day of a *today's* year and ends *today*. Use this date range if you want moneyGuru to show you your current situation.
 #. **Running year:** This date range *follows* today. It displays exactly *one year*, but instead of displaying full years, it uses the "Ahead months in Running year" preference to determine when the date range ends, and then starts exactly one year before that date.
 #. **All Transactions:** This date range starts at the date of the earliest transaction in your document and ends at now + ahead months (see Running Year).
 #. **Custom date range:** When you select this date range, moneyGuru will prompt you for a start date and an end date. Afterwards, the date range will be the dates you chose.
@@ -36,7 +36,17 @@ When selecting custom date ranges, you also have the option to have moneyGuru pu
 The thin red line
 -----------------
 
-All information in moneyGuru is displayed according to the currently selected date range. Things get interesting when the date range ends at a future date. If you have scheduled transactions or budget set up, the numbers you will see and the chart you will look at will include them. In the graphs, there is a sharp distinction between the past and the future. The past is displayed in green, and the future is displayed in gray, a thin red line separating both. So when you look at the grey part of graphs, you are looking at stuff that has not happened yet. Your net worth in your balance sheet will count the yet-to-happen scheduled transactions as well as budgets. Sometimes, you just want to know about your current financial situation. This is what the "Year to date" (|cmd_opt|\ 4) date range is for.
+All information in moneyGuru is displayed according to the currently selected
+date range. Things get interesting when the date range ends at a future date.
+If you have scheduled transactions set up, the numbers you will see and the
+chart you will look at will include them. In the graphs, there is a sharp
+distinction between the past and the future. The past is displayed in green,
+and the future is displayed in gray, a thin red line separating both. So when
+you look at the grey part of graphs, you are looking at stuff that has not
+happened yet. Your net worth in your balance sheet will count the yet-to-happen
+scheduled transactions. Sometimes, you just want to know about your current
+financial situation. This is what the "Year to date" (|cmd_opt|\ 4) date range
+is for.
 
 Visibility Options
 ------------------
@@ -68,11 +78,10 @@ The Net Worth and Profit & Loss views are where you do account management and ge
 * **Balance Sheet:**
 
     * **Account #:** An optional account number reference tied to the account. See the :doc:`editing page <editing>` for more info.
-    * **Start:** The balance of the account at the beginning of the date range. It includes scheduled transactions, but not budgets.
+    * **Start:** The balance of the account at the beginning of the date range. It includes scheduled transactions.
     * **End:** The balance of the account at the end of the date range.
     * **Change:** The difference between Start and End.
     * **Change %:** The difference in percentage between Start and End
-    * **Budgeted:** The amount of budget (for which this account is a **target**) left to allocate in this current date range. This means that, if your budgets correctly reflect reality, End + Budgeted should be your actual balance at the end of the date range.
     
 * **Profit & Loss:**
 
@@ -80,7 +89,6 @@ The Net Worth and Profit & Loss views are where you do account management and ge
     * **Current:** The cash flow of the account for the current date range.
     * **Last:** The cash flow of the account for the last date range. For example, if in a month range, the Last column shows the cash flow for the month prior to the current one. Year-to-date is a special case and under it, the Last column displays the last year's cash flow.
     * **Change and Change %:** Same as in the balance sheet.
-    * **Budgeted:** The amount of budget assigned to this account left to allocate in this current date range. This means that, if your budgets correctly reflect reality, Current + Budgeted should be your actual cash flow at the end of the date range.
 
 Transactions
 ------------
