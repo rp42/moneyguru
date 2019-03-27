@@ -398,13 +398,14 @@ amount_parse_single(
     if (last_sep == '.' || last_sep == ',') {
         // We have a decimal separator
         //
-        // Special case: digit count is exactly 3, more than exponent, and
-        // grouping_sep is a possible digital sep. We consider this a grouping
-        // sep. Example: 1,000 USD -> 1000.00
-        if (last_digit_group_count == 3 && last_digit_group_count > exponent
-                && (grouping_sep == '.' || grouping_sep == ',')) {
-            *dest = val * pow(10, exponent);
-            return true;
+        if ((last_sep == g_grouping_sep) && (grouping_sep == g_grouping_sep)) {
+            // Special case: digit count is exactly 3, more than exponent, and
+            // grouping_sep is a possible digital sep. We consider this a
+            // grouping sep. Example: 1,000 USD -> 1000.00
+            if (last_digit_group_count == 3 && last_digit_group_count > exponent) {
+                *dest = val * pow(10, exponent);
+                return true;
+            }
         }
         // It's possible that out digit count is not the same as our currency
         // exponent. Let's adjust.

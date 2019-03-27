@@ -123,6 +123,7 @@ static void test_parse()
 
     // Thousand separators are correctly seen as such (in bug #336, it was
     // mistaken for a decimal sep).
+    amount_configure('.', ',');
     acheck("1,000", "USD", 100000, USD);
 
     // Expression with thousand sep
@@ -155,10 +156,15 @@ static void test_parse()
     CU_ASSERT_TRUE(amount_parse(&a, "-(12.34)", "USD", false, false, false));
     eq(&a, -1234, USD);
 
-    // dot ambiguity. ref #379
+    // dot ambiguity. ref #379 and #422. Break ambiguity with configured
+    // thousand sep.
     acheck("USD 1000*1.055", NULL, 105500, USD);
-    // first dot should be considered a thousand sep
+    // first dot should be considered a thousand sep *only* if it's configured
+    // as such.
+    amount_configure(',', '.'); // a thousand sep
     acheck("USD 1.000*1.055", NULL, 105500, USD);
+    amount_configure(',', ' '); // not a thousand sep
+    acheck("USD 1.000*1.055", NULL, 105, USD);
 
     // With the strict_currency flag enabled, we return false on unsupported
     // currencies, even with a default_currency.

@@ -180,6 +180,12 @@ amount_convert(Amount *dest, const Amount *src, time_t date);
 
 /* Configure parameters under which amounts are parsed/formatted
  *
+ * These parameters are mostly only used for amount_format() because
+ * amount_parse() uses heuristics to try to guess what is a decimal sep and
+ * what is a thousands sep. *however*, in some tricky cases, there's an
+ * ambiguity. In those cases, amount_parse() will use the configured value
+ * to break the ambiguity.
+ *
  * These are saved globally.
  */
 void
