@@ -41,13 +41,16 @@ reqs:
 	@${PYTHON} -c 'import PyQt5' >/dev/null 2>&1 || \
 		{ echo "PyQt 5.4+ required. Install it and try again. Aborting"; exit 1; }
 
+help/%/conf.py:
+	ln -s ../en/conf.py $@
+
 help/%/changelog.rst: help/%/changelog.head.rst help/changelog 
 	$(PYTHON) support/genchangelog.py help/changelog | cat $< - > $@
 
 help/%/credits.rst: help/%/credits.head.rst help/credits.rst 
 	cat $+ > $@
 
-build/help/%: help/% help/%/changelog.rst help/%/credits.rst
+build/help/%: help/% help/%/changelog.rst help/%/credits.rst help/%/conf.py
 	$(PYTHON) -m sphinx $< $@
 
 alldocs: $(addprefix build/help/,en cs de fr it ru)
