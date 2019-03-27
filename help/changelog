@@ -1,3 +1,28 @@
+=== 3.0.0 (2019-03-27)
+
+The goal of this release is to strip what I see as cruft, weight that impairs
+further development, namely, budgets and plugins. They were both too heavy for
+the value they brought in. Removing them cleans the code a lot.
+
+Otherwise, the rewrite to C continues agressively, all major core elements now
+implemented in C, the latest addition being scheduling logic (see why I wanted
+to remove budgets first?).
+
+* Minimum python requirement is now v3.5+
+* Remove budgets. (#391)
+* Remove plugin system. (#401)
+* Continue C rewrite started in v2.12 further.
+* Simplify GUI signalling system ("de-notification").
+* Make autosave trigger each X steps instead of X minutes.
+* Remove example file.
+* Make import window modal (one import operation at a time).
+* Add "Match entries by date/amount" in import window. (#493)
+* Fix application icon by properly expanding parameter in sed. (#507)
+* Add "All files" filter to import's open file dialog. (#508)
+* Fix amount parsing ambiguity between thousands and decimal seps. (#422)
+* **Files saved with moneyGuru v3+ can't be read in earlier versions.** Files
+  saved with moneyGuru v2+ can be read correctly by moneyGuru v3.
+
 === 2.13.1 (2019-01-03)
 
 * Fix confusion with account groups with same name.
