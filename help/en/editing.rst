@@ -105,6 +105,12 @@ Fields allowing you to enter amounts have a few hidden features.
   character where it's hard to tell when it's a decimal separator or a thousand separator, which has
   been put there during formatting. We consider the first operand to be an amount, and the other
   operands as simple decimals.
+* In some cases, there can be an ambiguity in an amount between decimal
+  separators and thousands separators. moneyGuru tries to figure out which is
+  which as smartly as it can, but if it can't, **it uses formatting preferences
+  to de-ambiguate**. In other words, if ``.`` is your decimal separator and
+  ``,`` is your thousand separator, ``1.000 * 2`` will yield ``2`` and
+  ``1,000 * 2`` will yield ``2000``.
 
 Auto-completion, Autofill and Lookups
 -------------------------------------
