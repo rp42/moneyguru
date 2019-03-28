@@ -211,7 +211,6 @@ class EntryTableRow(BaseEntryTableRow):
                 changed_fields['transfer'] = self._transfer
         self.table.document.change_entry(entry, **changed_fields)
         self.table.mainwindow.revalidate()
-        self.load()
 
     def toggle_reconciled(self):
         assert self.table.reconciliation_mode

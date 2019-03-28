@@ -1961,13 +1961,24 @@ PyTransaction_dealloc(PyTransaction *self)
          *
          * Normally, we're supposed to deallocate our transaction here, but we
          * don't for the same reason we don't deallocate Account in AccountList:
-         * the Undoer. See account.c for details.
+         * the Undoer. The Undoer holds a reference to every transaction even
+         * after they're deleted (in case we want to undo that deletion).
+         *
+         * TODO: properly flag PyTransaction instances an unowned when the
+         * referenced txn end up in the Undoer so that we can set the memory
+         * ownership straight here.
          */
-        // TODO: free spawns. They should be safe to free. In quick tests I've
-        // made, only one test fails, undo-related. Should be easy to figure
-        // out.
         /*transaction_deinit(self->txn);*/
         /*free(self->txn);              */
+
+        /* ... ... except when dealing with spawns, we can free them because
+         * they are not kept in the undo chain: Only schedules are. So, if
+         * you're a spawn, off you go!
+         */
+        if (self->txn->type == TXN_TYPE_RECURRENCE) {
+            transaction_deinit(self->txn);
+            free(self->txn);
+        }
     }
     Py_TYPE(self)->tp_free(self);
 }
