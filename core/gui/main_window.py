@@ -326,6 +326,8 @@ class MainWindow(DocumentGUIObject):
         if self._current_pane is not None:
             view = self._current_pane.view
             view.apply_date_range(new_date_range, prev_date_range)
+        # we also need to invalidate all other panes.
+        self.document.touch()
 
     def clear(self):
         self.document.clear()

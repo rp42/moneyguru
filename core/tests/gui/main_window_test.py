@@ -6,16 +6,16 @@
 
 from datetime import date
 
-from ..testutil import eq_, with_app
+from ..testutil import eq_
 
 from ..base import TestApp
 from ...const import PaneType, PaneArea, AccountType
 from ...model.date import YearRange
 
 # --- Pristine
-@with_app(TestApp)
-def test_close_pane(app):
+def test_close_pane():
     # closing a view removes it from main window's subviews
+    app = TestApp()
     app.mw.current_pane_index = 1
     app.clear_gui_calls()
     app.mw.close_pane(3) # schedule
@@ -24,10 +24,10 @@ def test_close_pane(app):
     eq_(app.mw.current_pane_index, 1)
     app.check_gui_calls(app.mainwindow_gui, ['view_closed'])
 
-@with_app(TestApp)
-def test_close_pane_index_lower_than_selected(app):
+def test_close_pane_index_lower_than_selected():
     # when a view with an index lower than the selected view is closed, the selected view stays the
     # same.
+    app = TestApp()
     app.mw.current_pane_index = 2
     app.clear_gui_calls()
     app.mw.close_pane(1)
@@ -37,9 +37,9 @@ def test_close_pane_index_lower_than_selected(app):
     # the selected view index changed.
     app.check_gui_calls(app.mainwindow_gui, ['view_closed', 'change_current_pane'])
 
-@with_app(TestApp)
-def test_close_pane_when_selected(app):
+def test_close_pane_when_selected():
     # closing the selected view adjusts the current view index if appropriate
+    app = TestApp()
     app.mw.current_pane_index = 2
     app.clear_gui_calls()
     app.mw.close_pane(2)
@@ -49,10 +49,10 @@ def test_close_pane_when_selected(app):
     app.mw.close_pane(2)
     eq_(app.mw.current_pane_index, 1)
 
-@with_app(TestApp)
-def test_current_pane_index(app):
+def test_current_pane_index():
     # The main window has a `current_pane_index` property which indicate which view is currently
     # selected.
+    app = TestApp()
     for index in range(4):
         eq_(app.mw.current_pane_index, index)
         app.mw.select_next_view()
@@ -66,8 +66,8 @@ def test_current_pane_index(app):
     app.mw.select_previous_view()
     eq_(app.mw.current_pane_index, 0)
 
-@with_app(TestApp)
-def test_initial_panes(app):
+def test_initial_panes():
+    app = TestApp()
     eq_(app.mw.pane_count, 4)
     eq_(app.mw.pane_label(0), "Net Worth")
     eq_(app.mw.pane_label(1), "Profit & Loss")
@@ -78,9 +78,9 @@ def test_initial_panes(app):
     eq_(app.mw.pane_type(2), PaneType.Transaction)
     eq_(app.mw.pane_type(3), PaneType.Schedule)
 
-@with_app(TestApp)
-def test_move_pane(app):
+def test_move_pane():
     # moving a pane takes a pane at a specified index and moves it to the dest index
+    app = TestApp()
     app.mw.move_pane(2, 1)
     eq_(app.mw.pane_label(1), "Transactions")
     eq_(app.mw.pane_label(2), "Profit & Loss")
@@ -95,22 +95,22 @@ def test_move_pane(app):
     eq_(app.mw.pane_label(2), "Schedules")
     eq_(app.mw.pane_label(3), "Profit & Loss")
 
-@with_app(TestApp)
-def test_move_pane_before_selected(app):
+def test_move_pane_before_selected():
     # When a non-selected pane is moved before the selected one, update the selected index
+    app = TestApp()
     app.mw.move_pane(1, 0)
     eq_(app.mw.current_pane_index, 1)
 
-@with_app(TestApp)
-def test_move_pane_selected(app):
+def test_move_pane_selected():
     # When the moved pane is selected, the selection follows the pane.
+    app = TestApp()
     app.mw.move_pane(0, 3)
     eq_(app.mw.current_pane_index, 3)
 
-@with_app(TestApp)
-def test_selected_account_is_updated_on_nonrevalidating_show(app):
+def test_selected_account_is_updated_on_nonrevalidating_show():
     # When navigating between sheet-panes, the selected account (used for show_account and apanel)
     # is correctly updated
+    app = TestApp()
     app.add_account('Asset')
     app.add_account('Income', account_type=AccountType.Income)
     app.show_nwview()
@@ -118,32 +118,32 @@ def test_selected_account_is_updated_on_nonrevalidating_show(app):
     app.show_account()
     app.check_current_pane(PaneType.Account, account_name='Income')
 
-@with_app(TestApp)
-def test_select_pane_of_type_creates_new_pane_if_needed(app):
+def test_select_pane_of_type_creates_new_pane_if_needed():
     # calling select_pane_of_type() creates a new pane if needed
+    app = TestApp()
     app.mw.close_pane(0) # net worth
     app.mw.select_pane_of_type(PaneType.NetWorth)
     eq_(app.mw.pane_count, 4)
     app.check_current_pane(PaneType.NetWorth)
 
-@with_app(TestApp)
-def test_select_ttable_on_sfield_query(app):
+def test_select_ttable_on_sfield_query():
     # Setting a value in the search field selects the ttable.
+    app = TestApp()
     app.sfield.text = 'foobar'
     eq_(app.mw.current_pane_index, 2)
 
-@with_app(TestApp)
-def test_dont_close_last_pane(app):
+def test_dont_close_last_pane():
     # if close_pane() is called with only one pane left, don't do anything.
+    app = TestApp()
     while (app.mw.pane_count > 1):
         app.mw.close_pane(0)
     app.mw.close_pane(0) # no crash
     eq_(app.mw.pane_count, 1)
 
-@with_app(TestApp)
-def test_column_menu_attributes(app):
+def test_column_menu_attributes():
     # The column menu depends on the selected pane and shows the display attribute of optional
     # columns.
+    app = TestApp()
     app.show_nwview()
     expected = [
         ("Account #", False), ("Start", True), ("Change", False),
@@ -153,18 +153,18 @@ def test_column_menu_attributes(app):
     expected[0] = ("Account #", True)
     eq_(app.mw.column_menu_items(), expected)
 
-@with_app(TestApp)
-def test_column_visibility_change_actually_changes_visibility(app):
+def test_column_visibility_change_actually_changes_visibility():
     # Changing the value of a column visibility in view options actually changes visibility
+    app = TestApp()
     app.show_tview()
     app.set_column_visible('description', False)
     assert not app.ttable.columns.column_is_visible('description')
 
-@with_app(TestApp)
-def test_change_view_options_while_editing(app):
+def test_change_view_options_while_editing():
     # When a table is in editing mode and that a column visibility is changed, we have to tell the
     # gui to stop editing, or else we end up in a state where the core thinks it's editing when the
     # GUI isn't.
+    app = TestApp()
     app.show_tview()
     app.mw.new_item()
     app.ttable.payee = 'something' # in editing mode
@@ -177,8 +177,8 @@ def app_cleared_gui_calls():
     app.clear_gui_calls()
     return app
 
-@with_app(app_cleared_gui_calls)
-def test_new_tab(app):
+def test_new_tab():
+    app = app_cleared_gui_calls()
     emptyview = app.new_tab()
     eq_(app.mw.pane_count, 5)
     app.check_current_pane(PaneType.Empty)
@@ -187,8 +187,8 @@ def test_new_tab(app):
     app.check_current_pane(PaneType.Profit)
     app.check_gui_calls(app.mainwindow_gui, ['change_current_pane', 'refresh_panes', 'refresh_status_line'])
 
-@with_app(app_cleared_gui_calls)
-def test_toggle_area_visibility(app):
+def test_toggle_area_visibility():
+    app = app_cleared_gui_calls()
     app.show_nwview()
     app.mw.toggle_area_visibility(PaneArea.BottomGraph)
     app.nwview.view.check_gui_calls(['update_visibility'])
@@ -205,9 +205,9 @@ def app_one_account():
     app.clear_gui_calls()
     return app
 
-@with_app(app_one_account)
-def test_rename_opened_account_changes_tab_label(app):
+def test_rename_opened_account_changes_tab_label():
     # Renaming the account with an opened tab renames that tab.
+    app = app_one_account()
     app.show_account()
     index = app.mw.current_pane_index
     app.show_nwview()
@@ -217,9 +217,9 @@ def test_rename_opened_account_changes_tab_label(app):
     eq_(app.mw.pane_label(index), 'renamed')
     app.check_gui_calls(app.mainwindow_gui, ['refresh_panes', 'refresh_undo_actions'])
 
-@with_app(app_one_account)
-def test_show_account_opens_a_new_tab(app):
+def test_show_account_opens_a_new_tab():
     # Showing an account opens a new tab with the account shown in it.
+    app = app_one_account()
     app.show_account()
     eq_(app.mw.pane_count, 5)
     eq_(app.mw.current_pane_index, 4)
@@ -228,8 +228,8 @@ def test_show_account_opens_a_new_tab(app):
     expected = ['refresh_panes', 'change_current_pane']
     app.check_gui_calls_partial(app.mainwindow_gui, expected, verify_order=True)
 
-@with_app(app_one_account)
-def test_change_date_range(app):
+def test_change_date_range():
+    app = app_one_account()
     app.show_account()
     app.show_nwview()
     app.clear_gui_calls()
@@ -251,9 +251,9 @@ def app_asset_and_income_accounts_with_txn():
     app.clear_gui_calls()
     return app
 
-@with_app(app_asset_and_income_accounts_with_txn)
-def test_close_pane_of_autocleaned_accounts(app):
+def test_close_pane_of_autocleaned_accounts():
     # When an account is auto cleaned, close its pane if it's opened
+    app = app_asset_and_income_accounts_with_txn()
     app.etable.show_transfer_account() # the Salary account, which is auto-created
     app.link_aview()
     app.etable.show_transfer_account() # We're back on the Checking account
@@ -262,9 +262,9 @@ def test_close_pane_of_autocleaned_accounts(app):
     eq_(app.mw.pane_count, 5)
     eq_(app.mw.current_pane_index, 4) # we stay on the current index
 
-@with_app(app_asset_and_income_accounts_with_txn)
-def test_delete_account(app):
+def test_delete_account():
     # deleting a non-empty account shows the account reassign panel
+    app = app_asset_and_income_accounts_with_txn()
     app.show_nwview()
     app.bsheet.selected = app.bsheet.assets[0]
     app.clear_gui_calls()
@@ -272,9 +272,9 @@ def test_delete_account(app):
     arpanel = app.get_current_panel()
     arpanel.view.check_gui_calls(['pre_load', 'post_load'])
 
-@with_app(app_asset_and_income_accounts_with_txn)
-def test_navigate_back(app):
+def test_navigate_back():
     # navigate_back() shows the appropriate sheet depending on which account entry table shows
+    app = app_asset_and_income_accounts_with_txn()
     app.show_nwview()
     app.bsheet.selected = app.bsheet.assets[0]
     app.show_account()
@@ -288,10 +288,10 @@ def test_navigate_back(app):
     app.mw.navigate_back()
     eq_(app.mw.current_pane_index, 1)
 
-@with_app(app_asset_and_income_accounts_with_txn)
-def test_show_account_when_in_sheet(app):
+def test_show_account_when_in_sheet():
     # When a sheet is selected, show_account() shows the selected account. If the account already
     # has a tab opened, re-use that tab.
+    app = app_asset_and_income_accounts_with_txn()
     app.show_nwview()
     app.clear_gui_calls()
     app.show_account()
@@ -301,9 +301,9 @@ def test_show_account_when_in_sheet(app):
     app.show_account()
     eq_(app.mw.current_pane_index, 5) # a new tab is opened for this one
 
-@with_app(app_asset_and_income_accounts_with_txn)
-def test_switch_panes_through_show_account(app):
+def test_switch_panes_through_show_account():
     # Views shown in the main window depend on what's selected in the account tree.
+    app = app_asset_and_income_accounts_with_txn()
     app.show_pview()
     eq_(app.mw.current_pane_index, 1)
     app.istatement.selected = app.istatement.income[0]
@@ -321,8 +321,8 @@ def test_switch_panes_through_show_account(app):
     app.show_tview()
     eq_(app.mw.current_pane_index, 2)
 
-@with_app(app_asset_and_income_accounts_with_txn)
-def test_switch_panes_through_pane_index(app):
+def test_switch_panes_through_pane_index():
+    app = app_asset_and_income_accounts_with_txn()
     app.etable.show_transfer_account()
     eq_(app.mw.pane_count, 6) # Now, the two last views are our 2 accounts
     app.mw.select_previous_view()
@@ -342,13 +342,27 @@ def app_one_transaction():
     app.clear_gui_calls()
     return app
 
-@with_app(app_one_transaction)
-def test_show_account_when_in_etable(app):
+def test_show_account_when_in_etable():
+    app = app_one_transaction()
     app.show_account('first')
     app.show_account()
     app.check_current_pane(PaneType.Account, 'second')
 
-@with_app(app_one_transaction)
-def test_show_account_when_in_ttable(app):
+def test_show_account_when_in_ttable():
+    app = app_one_transaction()
     app.show_account()
     app.check_current_pane(PaneType.Account, 'first')
+
+def test_date_range_change():
+    # test that changing the date range invalidates all opened panes, not just
+    # the active one.
+    app = app_one_transaction()
+    app.show_account('first') # we show first
+    app.show_account() # then second
+    # Then we go out of range
+    app.drsel.select_prev_date_range()
+    # Both etables are empty
+    eq_(len(app.etable), 1) # only total row
+    app.show_account('first')
+    eq_(len(app.etable), 1)
+
