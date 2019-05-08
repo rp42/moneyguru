@@ -527,9 +527,10 @@ class Document(GUIObject):
             entry.transaction, date=date, description=description,
             payee=payee, checkno=checkno, global_scope=global_scope
         )
+        entry_date = entry.date # don't use entry past cooking.
         self._cook(from_date=min_date)
         self.accounts.clean_empty_categories()
-        self.date_range = self.date_range.around(entry.date)
+        self.date_range = self.date_range.around(entry_date)
 
     def delete_entries(self, entries):
         """Remove transactions in which ``entries`` belong from the document's transaction list.

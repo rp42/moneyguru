@@ -53,10 +53,16 @@ class Oven:
         if from_date is None:
             from_date = date.min
         else:
-            # it's possible that we have to reduce from_date a bit. If a split from before as a
-            # reconciled date >= from_date, we have to set from_date to that split's normal date
-            # We reverse the transactions to correctly detect chained overlappings in date/recdate
+            # it's possible that we have to reduce from_date a bit. If a split
+            # from before as a reconciled date >= from_date, we have to set
+            # from_date to that split's normal date We reverse the transactions
+            # to correctly detect chained overlappings in date/recdate
+            # Moreover, to avoid bad memory access, we don't want `from_date`
+            # to be later than the earliest schedule spawn we have.
             for txn in reversed(self.transactions): # splits from *cooked* txns
+                if txn.is_spawn:
+                    from_date = min(from_date, txn.date)
+                    continue
                 for split in txn.splits:
                     rdate = split.reconciliation_date
                     if rdate is not None and rdate >= from_date:

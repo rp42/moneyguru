@@ -398,6 +398,23 @@ def test_toggle_table_column(app):
     assert app.ttable[0].recurrent # nothing changed
 
 
+@with_app(app_daily_schedule)
+def test_crash_test(app):
+    # Spawns, by their "spawny" nature, are more subject to causing access
+    # violations than regular transactions, especially when global changes
+    # are involved. Here, we try to induce a crash.
+    # See issue #512
+    app.doc_gui.query_for_schedule_scope_result = ScheduleScope.Global
+    aview = app.show_account('account')
+    t = aview.table
+    assert len(t) == 7  # 7th is total row
+    t[2].date = '17/09/2008' # from 19/09/2018
+    t.save_edits()
+    assert len(t) == 8  # This brought in a new row
+    t[6].date = '01/10/2008' # from 30/09/2018
+    t.save_edits()
+    # We used to crash here.
+
 # --- One Schedule and one normal txn
 def app_one_schedule_and_one_normal_txn():
     app = TestApp()
