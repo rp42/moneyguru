@@ -102,4 +102,4 @@ clean:
 	-rm -f run.py
 	-rm -f qt/mg_rc.py
 
-.PHONY : clean srcpkg normpo mergepot ccore i18n reqs run pyc install all alldocs
+.PHONY : clean srcpkg normpo mergepot i18n reqs run pyc install all alldocs ccore $(CCORE_SRC)
