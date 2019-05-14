@@ -302,8 +302,10 @@ class ImportWindow(GUIObject):
     def _view_updated(self):
         if self.document.can_restore_from_prefs():
             self.restore_view()
-        # XXX Should replace by _update_selected_pane()?
+        # XXX Logically, we should call _update_selected_pane() but doing so
+        # make tests fail. to investigate.
         self._refresh_target_selection()
+        self.view.update_selected_pane()
         self._refresh_swap_list_items()
         self.import_table.refresh()
 

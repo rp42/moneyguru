@@ -18,8 +18,8 @@ def test_invalid_default():
     TestApp(app=Application(app_gui)) # no crash when CSVOptions is created
 
 # ---
-@with_app(TestApp)
-def test_dont_crash_on_invalid_utf8_characters(app):
+def test_dont_crash_on_invalid_utf8_characters():
+    app = TestApp()
     csvopt = app.mw.parse_file_for_import(testdata.filepath('csv/invalid_utf8_char.csv'))
     csvopt.encoding_index = 1
     csvopt.rescan() # no crash
@@ -107,11 +107,11 @@ def app_import_fortis_exclude_first_line_and_set_fields():
     app.csvopt.view.clear_calls()
     return app
 
-@with_app(app_import_fortis_exclude_first_line_and_set_fields)
-def test_continue_import_with_fields_set(app):
+def test_continue_import_with_fields_set():
     # sets the columns in app.mw.loader and continues importing
+    app = app_import_fortis_exclude_first_line_and_set_fields()
     iwin = app.csvopt.continue_import()
-    iwin.view.check_gui_calls(['show'])
+    iwin.view.check_gui_calls(['show', 'update_selected_pane'])
     eq_(len(iwin.panes), 1)
     eq_(iwin.panes[0].name, 'CSV Import')
     eq_(iwin.panes[0].count, 18)
@@ -120,16 +120,16 @@ def test_continue_import_with_fields_set(app):
     eq_(iwin.import_table[0].description_import, 'RETRAIT A UN DISTRIBUTEUR FORTIS')
     eq_(iwin.import_table[0].amount_import, '-100.00')
 
-@with_app(app_import_fortis_exclude_first_line_and_set_fields)
-def test_continue_import_without_the_first_line_being_excluded(app):
+def test_continue_import_without_the_first_line_being_excluded():
     # When the user forgets to exclude a header line, just ignore that line in guess_date_format()
+    app = app_import_fortis_exclude_first_line_and_set_fields()
     app.csvopt.set_line_excluded(0, False)
     iwin = app.csvopt.continue_import()
     eq_(len(iwin.import_table), 18)
     eq_(iwin.import_table[0].date_import, '01/12/2008')
 
-@with_app(app_import_fortis_exclude_first_line_and_set_fields)
-def test_create_and_navigate_layouts(app):
+def test_create_and_navigate_layouts():
+    app = app_import_fortis_exclude_first_line_and_set_fields()
     app.csvopt.new_layout('foobar') # 'foobar' is selected
     app.csvopt.view.check_gui_calls(['refresh_layout_menu'])
     eq_(app.csvopt.layout_names, ['Default', 'foobar'])
@@ -141,40 +141,40 @@ def test_create_and_navigate_layouts(app):
     app.csvopt.select_layout('foobar')
     eq_(app.csvopt.columns[5], CsvField.Payee)
 
-@with_app(app_import_fortis_exclude_first_line_and_set_fields)
-def test_new_layout_with_empty_name(app):
+def test_new_layout_with_empty_name():
     # when trying to add a layout with an empty name, do nothing
+    app = app_import_fortis_exclude_first_line_and_set_fields()
     app.csvopt.new_layout('')
     app.csvopt.new_layout(None)
     eq_(len(app.csvopt.layout_names), 1)
 
-@with_app(app_import_fortis_exclude_first_line_and_set_fields)
-def test_rename_layout_with_empty_name(app):
+def test_rename_layout_with_empty_name():
     # when trying to add a layout with an empty name, do nothing
+    app = app_import_fortis_exclude_first_line_and_set_fields()
     app.csvopt.rename_selected_layout('')
     app.csvopt.rename_selected_layout(None)
     eq_(app.csvopt.layout.name, 'Default')
 
-@with_app(app_import_fortis_exclude_first_line_and_set_fields)
-def test_set_same_field_on_another_column(app):
+def test_set_same_field_on_another_column():
     # if a field is already set somewhere and that another column sets the same field elsewhere,
     # clear the other column
+    app = app_import_fortis_exclude_first_line_and_set_fields()
     app.csvopt.set_column_field(2, CsvField.Date)
     eq_(app.csvopt.get_column_name(1), 'None')
 
-@with_app(app_import_fortis_exclude_first_line_and_set_fields)
-def test_set_wrong_amount_column_and_continue_import(app):
+def test_set_wrong_amount_column_and_continue_import():
     # When setting the amount column on a wrong column, don't continue import and show an error
     # message.
+    app = app_import_fortis_exclude_first_line_and_set_fields()
     app.csvopt.set_column_field(5, CsvField.Amount)
     app.csvopt.view.clear_calls()
     app.csvopt.continue_import()
     app.csvopt.view.check_gui_calls(['show_message'])
 
-@with_app(app_import_fortis_exclude_first_line_and_set_fields)
-def test_set_wrong_increase_decrease_column_and_continue_import(app):
+def test_set_wrong_increase_decrease_column_and_continue_import():
     # When setting the amount column on a wrong column, don't continue import and show an error
     # message.
+    app = app_import_fortis_exclude_first_line_and_set_fields()
     app.csvopt.set_column_field(3, CsvField.Increase)
     app.csvopt.set_column_field(4, CsvField.Decrease)
     app.csvopt.view.clear_calls()
@@ -255,9 +255,9 @@ def app_fortis_with_two_layouts():
     app.csvopt.view.clear_calls()
     return app
 
-@with_app(app_fortis_with_two_layouts)
-def test_close_document_saves_prefs(app):
+def test_close_document_saves_prefs():
     # when the panel is closed, layouts are saved to preferences
+    app = app_fortis_with_two_layouts()
     del app.csvopt
     app.panel_view_provider.close_panel()
     # None values can't be in the preferences. They have to be replaced by empty strings.
@@ -274,32 +274,32 @@ def test_close_document_saves_prefs(app):
     }
     eq_(app.app_gui.get_default(LAYOUT_PREFERENCE_NAME), [default, foobar])
 
-@with_app(app_fortis_with_two_layouts)
-def test_delete_selected_layout(app):
+def test_delete_selected_layout():
+    app = app_fortis_with_two_layouts()
     app.csvopt.delete_selected_layout()
     app.csvopt.view.check_gui_calls(['refresh_layout_menu', 'refresh_columns_name', 'refresh_lines'])
     eq_(app.csvopt.layout_names, ['Default', 'foobar'])
     eq_(app.csvopt.layout.name, 'Default')
 
-@with_app(app_fortis_with_two_layouts)
-def test_load_another_import_selects_default_layout(app):
+def test_load_another_import_selects_default_layout():
     # when a file is loaded, select the default layout, and reset it
+    app = app_fortis_with_two_layouts()
     del app.csvopt
     app.panel_view_provider.close_panel()
     csvopt = app.mw.parse_file_for_import(testdata.filepath('csv/lots_of_noise.csv'))
     eq_(csvopt.layout.name, 'Default')
     assert csvopt.columns[5] is None
 
-@with_app(app_fortis_with_two_layouts)
-def test_rename_selected_layout(app):
+def test_rename_selected_layout():
+    app = app_fortis_with_two_layouts()
     app.csvopt.rename_selected_layout('foobaz')
     app.csvopt.view.check_gui_calls(['refresh_layout_menu'])
     eq_(app.csvopt.layout_names, ['Default', 'foobar', 'foobaz'])
 
-@with_app(app_fortis_with_two_layouts)
-def test_rename_target_account_doesnt_crash_layouts(app):
+def test_rename_target_account_doesnt_crash_layouts():
     # When renaming an account targeted by a layout doesn't cause a crash next time this layout
     # is loaded.
+    app = app_fortis_with_two_layouts()
     app.bsheet.selected = app.bsheet.assets[0] # 'one', the target account
     app.bsheet.assets[0].name = 'renamed'
     app.bsheet.save_edits()
@@ -307,9 +307,9 @@ def test_rename_target_account_doesnt_crash_layouts(app):
     # the account doesn't exist, fallback to <New Account>
     eq_(app.csvopt.selected_target_index, 0)
 
-@with_app(app_fortis_with_two_layouts)
-def test_select_same_layout_doesnt_refresh_gui(app):
+def test_select_same_layout_doesnt_refresh_gui():
     # Selecting the layout that's already selected doesn't trigger gui refreshes
+    app = app_fortis_with_two_layouts()
     app.csvopt.select_layout('foobaz')
     app.csvopt.view.check_gui_calls_partial(not_expected=['refresh_layout_menu'])
 
@@ -587,16 +587,16 @@ def app_simple_csv():
     app.csvopt.set_column_field(5, CsvField.Amount)
     return app
 
-@with_app(app_simple_csv)
-def test_two_columns_with_description(app):
+def test_two_columns_with_description():
     # When two columns have a Description field, merge them together.
+    app = app_simple_csv()
     app.csvopt.set_column_field(3, CsvField.Description)
     iwin = app.csvopt.continue_import()
     eq_(iwin.import_table[0].description_import, 'description whatever')
 
-@with_app(app_simple_csv)
-def test_two_columns_with_payee(app):
+def test_two_columns_with_payee():
     # When two columns have a Payee field, merge them together.
+    app = app_simple_csv()
     app.csvopt.set_column_field(3, CsvField.Payee)
     iwin = app.csvopt.continue_import()
     eq_(iwin.import_table[0].payee_import, 'payee whatever')
