@@ -1,3 +1,10 @@
+=== 3.0.1 (2019-05-20)
+
+* Fix memory leak.
+* Fix pane invalidation on date range change.
+* Fix crash when processing complex schedules. (#512)
+* Fix import window refresh when importing CSV files. (#513)
+
 === 3.0.0 (2019-03-27)
 
 The goal of this release is to strip what I see as cruft, weight that impairs
