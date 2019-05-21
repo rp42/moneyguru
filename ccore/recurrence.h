@@ -45,3 +45,8 @@ inc_date(time_t date, RepeatType repeat_type, int count);
  */
 time_t
 inc_date_skip(time_t date, RepeatType repeat_type, int count);
+
+/* Return repeat type under its string form ("daily", "monthly", etc.).
+ */ 
+char*
+repeat_type_name(RepeatType t);

@@ -118,3 +118,17 @@ inc_date_skip(time_t date, RepeatType repeat_type, int count)
     }
     return -1;
 }
+
+char*
+repeat_type_name(RepeatType t)
+{
+    switch (t) {
+        case REPEAT_DAILY: return "daily";
+        case REPEAT_WEEKLY: return "weekly";
+        case REPEAT_MONTHLY: return "monthly";
+        case REPEAT_YEARLY: return "yearly";
+        case REPEAT_WEEKDAY: return "weekday";
+        case REPEAT_WEEKDAY_LAST: return "weekday_last";
+    }
+    return "monthly";
+}

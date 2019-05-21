@@ -70,3 +70,8 @@ account_name_set(Account *account, const char *name);
 
 void
 account_normalize_amount(Account *account, Amount *dst);
+
+/* Return account's type under its string form ("asset", "liability", etc.).
+ */ 
+char*
+account_type_name(Account *account);

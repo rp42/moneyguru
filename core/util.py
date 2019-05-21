@@ -1,13 +1,11 @@
-# Copyright 2018 Virgil Dupras
+# Copyright 2019 Virgil Dupras
 #
 # This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
 # which should be included with this package. The terms are also available at
 # http://www.gnu.org/licenses/gpl-3.0.html
 
-import sys
 import os
 import os.path as op
-import re
 from datetime import timedelta
 
 def nonone(value, replace_value):
@@ -101,14 +99,6 @@ def escape(s, to_escape, escape_with='\\'):
     """Returns ``s`` with characters in ``to_escape`` all prepended with ``escape_with``.
     """
     return ''.join((escape_with + c if c in to_escape else c) for c in s)
-
-_valid_xml_range = '\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD'
-if sys.maxunicode > 0x10000:
-    _valid_xml_range += '%s-%s' % (chr(0x10000), chr(min(sys.maxunicode, 0x10FFFF)))
-RE_INVALID_XML_SUB = re.compile('[^%s]' % _valid_xml_range, re.U).sub
-
-def remove_invalid_xml(s, replace_with=' '):
-    return RE_INVALID_XML_SUB(replace_with, s)
 
 # --- Date related
 

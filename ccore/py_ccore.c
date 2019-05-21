@@ -10,6 +10,7 @@
 #include "undo.h"
 #include "schedule.h"
 #include "util.h"
+#include "save.h"
 
 // NOTE ABOUT DECREF AND ERRORS
 //
@@ -900,14 +901,7 @@ PyAccount_currency(PyAccount *self)
 static PyObject *
 PyAccount_type(PyAccount *self)
 {
-    char *s = "";
-    switch (self->account->type) {
-        case ACCOUNT_ASSET: s = "asset"; break;
-        case ACCOUNT_LIABILITY: s = "liability"; break;
-        case ACCOUNT_INCOME: s = "income"; break;
-        case ACCOUNT_EXPENSE: s = "expense"; break;
-    }
-    return PyUnicode_InternFromString(s);
+    return PyUnicode_InternFromString(account_type_name(self->account));
 }
 
 static int
@@ -2835,16 +2829,6 @@ PyRecurrence_change(PyRecurrence *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject*
-PyRecurrence_is_alive(PyRecurrence *self)
-{
-    if (schedule_is_alive(&self->schedule)) {
-        Py_RETURN_TRUE;
-    } else {
-        Py_RETURN_FALSE;
-    }
-}
-
-static PyObject*
 PyRecurrence_add_global_change(PyRecurrence *self, PyObject *args)
 {
     PyObject *date_py;
@@ -2998,163 +2982,6 @@ PyRecurrence_date2globalchange(PyRecurrence *self)
         Py_DECREF(txn_py);
     }
     return res;
-}
-
-/* Oven functions */
-
-/* "Cook" txns into Entry with running balances
- *
- * This takes a list of transactions to cook. Adds entries directly in the
- * proper accounts.
- */
-static gint
-_sort_txn_by_date(gconstpointer a, gconstpointer b, gpointer data)
-{
-    return ((Transaction *)a)->date - ((Transaction *)b)->date;
-}
-
-static PyObject*
-py_oven_cook_txns(PyObject *self, PyObject *args)
-{
-    PyAccountList *accounts;
-    PyTransactionList *txns;
-    PyObject *schedules;
-    PyObject *from_py, *until_py;
-
-    int res = PyArg_ParseTuple(
-        args, "OOOOO", &accounts, &txns, &schedules, &from_py, &until_py);
-    if (!res) {
-        return NULL;
-    }
-    time_t from = pydate2time(from_py);
-    time_t until = pydate2time(until_py);
-
-    // Clear old cooked entries
-    for (int i=0; i<accounts->alist.count; i++) {
-        Account *a = accounts->alist.accounts[i];
-        EntryList *entries = accounts_entries_for_account(
-            &accounts->alist, a);
-        entries_clear(entries, from);
-    }
-
-    // add relevant txns to cooked txns list
-    GSequence *filtered = g_sequence_new(NULL);
-    for (unsigned int i=0; i<txns->tlist.count; i++) {
-        Transaction *txn = txns->tlist.txns[i];
-        if ((txn->date >= from) && (txn->date <= until)) {
-            g_sequence_append(filtered, txn);
-        }
-    }
-
-    // generate spawns to add to txns list
-    Py_ssize_t len = PySequence_Length(schedules);
-    for (int i=0; i<len; i++) {
-        // borrowed
-        PyRecurrence *rec = (PyRecurrence *)PyList_GetItem(schedules, i);
-        // we have ownership of all those spawns here. We'll manage them in a
-        // split way: spawns that don't belong in `filtered` are freed right
-        // away. spawns that do belong in `filtered` will end up in *owned*
-        // PyTransaction instances (we take care of this in the following
-        // main loop).
-        GSList *spawns = schedule_get_spawns(&rec->schedule, until);
-        GSList *iter = spawns;
-        while (iter) {
-            Transaction *spawn = iter->data;
-            if ((spawn->date >= from) && (spawn->date <= until)) {
-                g_sequence_append(filtered, spawn);
-            } else {
-                // spawns are owned by us. If we aren't going to return them,
-                // we have to free them.
-                transaction_deinit(spawn);
-            }
-            iter = g_slist_next(iter);
-        }
-        g_slist_free(spawns);
-    }
-    g_sequence_sort(filtered, _sort_txn_by_date, NULL);
-
-    // For each txn to cook, generate entries. Also, add txn to resulting
-    // `cooked` list.
-    PyObject *cooked = PyList_New(g_sequence_get_length(filtered));
-    GSequenceIter *iter1 = g_sequence_get_begin_iter(filtered);
-    while (!g_sequence_iter_is_end(iter1)) {
-        Transaction *txn = g_sequence_get(iter1);
-        PyTransaction *txn_py = _PyTransaction_from_txn(txn);
-        int pos = g_sequence_iter_get_position(iter1);
-        if (txn->type == TXN_TYPE_RECURRENCE) {
-            // Spawns are owned: get_spawns gives us txns that we own.
-            txn_py->owned = true;
-            txn->position = pos;
-        }
-        // stolen
-        PyList_SetItem(cooked, pos, (PyObject *)txn_py);
-        int slen = txn->splitcount;
-        for (int j=0; j<slen; j++) {
-            Split *split = &txn->splits[j];
-            if (split->account == NULL) {
-                continue;
-            }
-            EntryList *entries = accounts_entries_for_account(
-                &accounts->alist, split->account);
-            entries_create(entries, split, txn);
-        }
-        iter1 = g_sequence_iter_next(iter1);
-    }
-    g_sequence_free(filtered);
-
-    // Cook all entries
-    GHashTableIter iter2;
-    g_hash_table_iter_init(&iter2, accounts->alist.a2entries);
-    gpointer _, entries;
-    while (g_hash_table_iter_next(&iter2, &_, &entries)) {
-        entries_cook(entries);
-    }
-    return cooked;
-}
-
-static PyObject*
-py_patch_today(PyObject *self, PyObject *today_p)
-{
-    if (today_p == Py_None) {
-        // unpatch
-        today_patch(0);
-    } else {
-        time_t today = pydate2time(today_p);
-        if (today == -1) {
-            return NULL;
-        }
-        today_patch(today);
-    }
-    Py_RETURN_NONE;
-}
-
-static PyObject*
-py_inc_date(PyObject *self, PyObject *args)
-{
-    PyObject *date_py;
-    int type;
-    int count;
-
-    if (!PyArg_ParseTuple(args, "Oii", &date_py, &type, &count)) {
-        return NULL;
-    }
-    time_t date = pydate2time(date_py);
-    if (date == -1) {
-        return NULL;
-    }
-    RepeatType rt;
-    if ((type >= REPEAT_DAILY) && (type <= REPEAT_WEEKDAY_LAST)) {
-        rt = type;
-    } else {
-        PyErr_SetString(PyExc_ValueError, "invalid type");
-        return NULL;
-    }
-    time_t res = inc_date(date, rt, count);
-    if (res == -1) {
-        Py_RETURN_NONE;
-    } else {
-        return time2pydate(res);
-    }
 }
 
 /* PyTransactionList */
@@ -3593,6 +3420,203 @@ PyUndoStep_dealloc(PyUndoStep *self)
     Py_TYPE(self)->tp_free(self);
 }
 
+/* Module functions */
+
+/* "Cook" txns into Entry with running balances
+ *
+ * This takes a list of transactions to cook. Adds entries directly in the
+ * proper accounts.
+ */
+static gint
+_sort_txn_by_date(gconstpointer a, gconstpointer b, gpointer data)
+{
+    return ((Transaction *)a)->date - ((Transaction *)b)->date;
+}
+
+static PyObject*
+py_oven_cook_txns(PyObject *self, PyObject *args)
+{
+    PyAccountList *accounts;
+    PyTransactionList *txns;
+    PyObject *schedules;
+    PyObject *from_py, *until_py;
+
+    int res = PyArg_ParseTuple(
+        args, "OOOOO", &accounts, &txns, &schedules, &from_py, &until_py);
+    if (!res) {
+        return NULL;
+    }
+    time_t from = pydate2time(from_py);
+    time_t until = pydate2time(until_py);
+
+    // Clear old cooked entries
+    for (int i=0; i<accounts->alist.count; i++) {
+        Account *a = accounts->alist.accounts[i];
+        EntryList *entries = accounts_entries_for_account(
+            &accounts->alist, a);
+        entries_clear(entries, from);
+    }
+
+    // add relevant txns to cooked txns list
+    GSequence *filtered = g_sequence_new(NULL);
+    for (unsigned int i=0; i<txns->tlist.count; i++) {
+        Transaction *txn = txns->tlist.txns[i];
+        if ((txn->date >= from) && (txn->date <= until)) {
+            g_sequence_append(filtered, txn);
+        }
+    }
+
+    // generate spawns to add to txns list
+    Py_ssize_t len = PySequence_Length(schedules);
+    for (int i=0; i<len; i++) {
+        // borrowed
+        PyRecurrence *rec = (PyRecurrence *)PyList_GetItem(schedules, i);
+        // we have ownership of all those spawns here. We'll manage them in a
+        // split way: spawns that don't belong in `filtered` are freed right
+        // away. spawns that do belong in `filtered` will end up in *owned*
+        // PyTransaction instances (we take care of this in the following
+        // main loop).
+        GSList *spawns = schedule_get_spawns(&rec->schedule, until);
+        GSList *iter = spawns;
+        while (iter) {
+            Transaction *spawn = iter->data;
+            if ((spawn->date >= from) && (spawn->date <= until)) {
+                g_sequence_append(filtered, spawn);
+            } else {
+                // spawns are owned by us. If we aren't going to return them,
+                // we have to free them.
+                transaction_deinit(spawn);
+            }
+            iter = g_slist_next(iter);
+        }
+        g_slist_free(spawns);
+    }
+    g_sequence_sort(filtered, _sort_txn_by_date, NULL);
+
+    // For each txn to cook, generate entries. Also, add txn to resulting
+    // `cooked` list.
+    PyObject *cooked = PyList_New(g_sequence_get_length(filtered));
+    GSequenceIter *iter1 = g_sequence_get_begin_iter(filtered);
+    while (!g_sequence_iter_is_end(iter1)) {
+        Transaction *txn = g_sequence_get(iter1);
+        PyTransaction *txn_py = _PyTransaction_from_txn(txn);
+        int pos = g_sequence_iter_get_position(iter1);
+        if (txn->type == TXN_TYPE_RECURRENCE) {
+            // Spawns are owned: get_spawns gives us txns that we own.
+            txn_py->owned = true;
+            txn->position = pos;
+        }
+        // stolen
+        PyList_SetItem(cooked, pos, (PyObject *)txn_py);
+        int slen = txn->splitcount;
+        for (int j=0; j<slen; j++) {
+            Split *split = &txn->splits[j];
+            if (split->account == NULL) {
+                continue;
+            }
+            EntryList *entries = accounts_entries_for_account(
+                &accounts->alist, split->account);
+            entries_create(entries, split, txn);
+        }
+        iter1 = g_sequence_iter_next(iter1);
+    }
+    g_sequence_free(filtered);
+
+    // Cook all entries
+    GHashTableIter iter2;
+    g_hash_table_iter_init(&iter2, accounts->alist.a2entries);
+    gpointer _, entries;
+    while (g_hash_table_iter_next(&iter2, &_, &entries)) {
+        entries_cook(entries);
+    }
+    return cooked;
+}
+
+static PyObject*
+py_patch_today(PyObject *self, PyObject *today_p)
+{
+    if (today_p == Py_None) {
+        // unpatch
+        today_patch(0);
+    } else {
+        time_t today = pydate2time(today_p);
+        if (today == -1) {
+            return NULL;
+        }
+        today_patch(today);
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+py_inc_date(PyObject *self, PyObject *args)
+{
+    PyObject *date_py;
+    int type;
+    int count;
+
+    if (!PyArg_ParseTuple(args, "Oii", &date_py, &type, &count)) {
+        return NULL;
+    }
+    time_t date = pydate2time(date_py);
+    if (date == -1) {
+        return NULL;
+    }
+    RepeatType rt;
+    if ((type >= REPEAT_DAILY) && (type <= REPEAT_WEEKDAY_LAST)) {
+        rt = type;
+    } else {
+        PyErr_SetString(PyExc_ValueError, "invalid type");
+        return NULL;
+    }
+    time_t res = inc_date(date, rt, count);
+    if (res == -1) {
+        Py_RETURN_NONE;
+    } else {
+        return time2pydate(res);
+    }
+}
+
+static PyObject*
+py_save_native(PyObject *self, PyObject *args)
+{
+    char *filename;
+    char *document_id;
+    PyAccountList *accounts;
+    PyTransactionList *txns;
+    PyObject *schedules;
+    char *currency_code;
+    DocumentProperties props;
+
+    int res = PyArg_ParseTuple(
+        args, "ssOOOsiii", &filename, &document_id, &accounts, &txns,
+        &schedules, &currency_code, &props.first_weekday, &props.ahead_months,
+        &props.year_start_month);
+    if (!res) {
+        return NULL;
+    }
+
+    props.default_currency = getcur(currency_code);
+    if (props.default_currency == NULL) {
+        return NULL;
+    }
+
+    Schedule **cs = _pyseq2scheds(schedules);
+    res = save_native(
+        filename,
+        document_id,
+        &props,
+        &accounts->alist,
+        &txns->tlist,
+        cs);
+    free(cs);
+    if (res != 0) {
+        PyErr_SetString(PyExc_RuntimeError, "error during save_native()");
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
 /* Python Boilerplate */
 
 static PyGetSetDef PyAmount_getseters[] = {
@@ -3734,6 +3758,7 @@ static PyMethodDef module_methods[] = {
     {"oven_cook_txns", py_oven_cook_txns, METH_VARARGS},
     {"patch_today", py_patch_today, METH_O},
     {"inc_date", py_inc_date, METH_VARARGS},
+    {"save_native", py_save_native, METH_VARARGS},
     {NULL}  /* Sentinel */
 };
 
@@ -3964,7 +3989,6 @@ static PyMethodDef PyRecurrence_methods[] = {
     {"change_globally", (PyCFunction)PyRecurrence_change_globally, METH_O, ""},
     {"contains_spawn", (PyCFunction)PyRecurrence_contains_spawn, METH_O, ""},
     {"delete_at", (PyCFunction)PyRecurrence_delete_at, METH_O, ""},
-    {"is_alive", (PyCFunction)PyRecurrence_is_alive, METH_NOARGS, ""},
     {"replicate", (PyCFunction)PyRecurrence_replicate, METH_NOARGS, ""},
     {"reassign_account", (PyCFunction)PyRecurrence_reassign_account, METH_VARARGS, ""},
     {0, 0, 0, 0},

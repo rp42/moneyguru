@@ -1,4 +1,4 @@
-# Copyright 2018 Virgil Dupras
+# Copyright 2019 Virgil Dupras
 #
 # This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
 # which should be included with this package. The terms are also available at
@@ -7,7 +7,7 @@
 from .testutil import eq_
 from ..util import (
     nonone, tryint, minmax, first, flatten, dedupe, stripfalse, extract,
-    allsame, escape, remove_invalid_xml
+    allsame, escape
 )
 
 def test_nonone():
@@ -60,11 +60,3 @@ def test_escape():
     eq_('f\\o\\ob\\ar', escape('foobar', 'oa'))
     eq_('f*o*ob*ar', escape('foobar', 'oa', '*'))
     eq_('f*o*ob*ar', escape('foobar', set('oa'), '*'))
-
-def test_remove_invalid_xml():
-    eq_(remove_invalid_xml('foo\0bar\x0bbaz'), 'foo bar baz')
-    # surrogate blocks have to be replaced, but not the rest
-    eq_(remove_invalid_xml('foo\ud800bar\udfffbaz\ue000'), 'foo bar baz\ue000')
-    # replace with something else
-    eq_(remove_invalid_xml('foo\0baz', replace_with='bar'), 'foobarbaz')
-

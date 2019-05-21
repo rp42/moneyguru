@@ -25,16 +25,6 @@ def test_dont_save_invalid_xml_characters(tmpdir):
     app.mw.load_from_xml(filepath) # no exception
     eq_(app.ttable[0].description, "foo bar")
 
-def test_saved_file_starts_with_xml_header(tmpdir):
-    # Make sure that moneyGuru files start with an xml header, something that elementtree doesn't
-    # do automatically.
-    app = TestApp()
-    filepath = str(tmpdir.join('foo.xml'))
-    app.doc.save_to_xml(filepath)
-    fp = open(filepath)
-    contents = fp.read()
-    assert contents.startswith('<?xml version="1.0" encoding="utf-8"?>\n')
-
 # ---
 class TestLoadFile:
     # Loads 'simple.moneyguru', a file with 2 accounts and 2 entries in each. Select the first entry.

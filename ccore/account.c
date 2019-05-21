@@ -115,3 +115,15 @@ account_normalize_amount(Account *account, Amount *dst)
         dst->val *= -1;
     }
 }
+
+char*
+account_type_name(Account *account)
+{
+    switch (account->type) {
+        case ACCOUNT_ASSET: return "asset";
+        case ACCOUNT_LIABILITY: return "liability";
+        case ACCOUNT_INCOME: return "income";
+        case ACCOUNT_EXPENSE: return "expense";
+    }
+    return "";
+}

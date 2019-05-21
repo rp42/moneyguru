@@ -1,7 +1,7 @@
 PYTHON ?= python3
 
 SRCS = currency.c amount.c account.c accounts.c split.c transaction.c \
-	transactions.c entry.c util.c undo.c recurrence.c schedule.c
+	transactions.c entry.c util.c undo.c recurrence.c schedule.c save/native.c
 OBJS = $(SRCS:%.c=%.o)
 TEST_SRCS = $(addprefix tests/, amount.c account.c transaction.c util.c \
 	recurrence.c undo.c main.c)
