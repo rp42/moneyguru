@@ -72,6 +72,10 @@ schedule_copy(Schedule *dst, const Schedule *src);
 void
 schedule_delete_at(Schedule *sched, time_t date);
 
+// Returns whether two schedules are the same
+bool
+schedule_eq(const Schedule *a, const Schedule *b);
+
 // Whether the schedule can yield any spawn
 bool
 schedule_is_alive(Schedule *sched);

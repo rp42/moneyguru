@@ -632,31 +632,10 @@ class TestApp(TestAppBase):
 
 
 def compare_apps(first, second, qif_mode=False):
-    def compare_txns(txn1, txn2):
-        eq_(txn1.date, txn2.date)
-        eq_(txn1.description, txn2.description)
-        eq_(txn1.payee, txn2.payee)
-        eq_(txn1.checkno, txn2.checkno)
-        if not qif_mode:
-            eq_(txn1.notes, txn2.notes)
-        eq_(len(txn1.splits), len(txn2.splits))
-        splits1 = txn1.splits
-        splits2 = txn2.splits
-        splits1.sort(key=lambda s: getattr(s.account, 'name', ''))
-        splits2.sort(key=lambda s: getattr(s.account, 'name', ''))
-        for split1, split2 in zip(splits1, splits2):
-            try:
-                account1 = split1.account.name if split1.account else ''
-                account2 = split2.account.name if split2.account else ''
-                eq_(account1, account2)
-                if qif_mode:
-                    eq_(split1.amount, split2.amount)
-                else:
-                    eq_(split1.memo, split2.memo)
-                    eq_(split1.amount, split2.amount)
-                eq_(split1.reconciled, split2.reconciled)
-            except AssertionError:
-                raise
+    def qif_normalize(t):
+        t.change(notes='')
+        for s in t.splits:
+            s.memo = ''
 
     eq_(len(first.accounts), len(second.accounts))
     account_pairs = list(zip(sorted(first.accounts, key=attrgetter('name')),
@@ -680,26 +659,13 @@ def compare_apps(first, second, qif_mode=False):
             raise
     eq_(len(first.transactions), len(second.transactions))
     for txn1, txn2 in zip(first.transactions, second.transactions):
-        compare_txns(txn1, txn2)
+        if qif_mode:
+            qif_normalize(txn1)
+            qif_normalize(txn2)
+        assert txn1.check_eq(txn2)
     eq_(len(first.schedules), len(second.schedules))
     for rec1, rec2 in zip(first.schedules, second.schedules):
-        eq_(rec1.repeat_type, rec2.repeat_type)
-        eq_(rec1.repeat_every, rec2.repeat_every)
-        compare_txns(rec1.ref, rec2.ref)
-        eq_(rec1.stop_date, rec2.stop_date)
-        eq_(len(rec1.date2exception), len(rec2.date2exception))
-        for date_ in rec1.date2exception:
-            exc1 = rec1.date2exception[date_]
-            exc2 = rec2.date2exception[date_]
-            if exc1 is None:
-                assert exc2 is None
-            else:
-                compare_txns(exc1, exc2)
-        eq_(len(rec1.date2globalchange), len(rec2.date2globalchange))
-        for date_ in rec1.date2globalchange:
-            txn1 = rec1.date2globalchange[date_]
-            txn2 = rec2.date2globalchange[date_]
-            compare_txns(txn1, txn2)
+        assert rec1.check_eq(rec2)
 
 def print_table(table, extra_attrs=[]):
     def getval(row, attrname):

@@ -1585,6 +1585,20 @@ PyTransaction_balance(PyTransaction *self, PyObject *args)
 }
 
 static PyObject *
+PyTransaction_check_eq(PyTransaction *self, PyTransaction *other)
+{
+    if (!PyObject_IsInstance((PyObject *)other, Transaction_Type)) {
+        PyErr_SetString(PyExc_TypeError, "not a txn");
+        return NULL;
+    }
+    if (transaction_eq(self->txn, other->txn)) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
+    }
+}
+
+static PyObject *
 PyTransaction_copy_from(PyTransaction *self, PyTransaction *other)
 {
     if (!PyObject_IsInstance((PyObject *)other, Transaction_Type)) {
@@ -2951,37 +2965,17 @@ PyRecurrence_ref(PyRecurrence *self)
 }
 
 static PyObject *
-PyRecurrence_date2exception(PyRecurrence *self)
+PyRecurrence_check_eq(PyRecurrence *self, PyRecurrence *other)
 {
-    PyObject *res = PyDict_New();
-    GHashTableIter iter;
-    gpointer key, value;
-    g_hash_table_iter_init(&iter, self->schedule.deletions);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        time_t date = (time_t)key;
-        PyObject *date_py = time2pydate(date);
-        PyDict_SetItem(res, date_py, Py_None);
-        Py_DECREF(date_py);
+    if (!PyObject_IsInstance((PyObject *)other, Recurrence_Type)) {
+        PyErr_SetString(PyExc_TypeError, "not a schedule");
+        return NULL;
     }
-    return res;
-}
-
-static PyObject *
-PyRecurrence_date2globalchange(PyRecurrence *self)
-{
-    PyObject *res = PyDict_New();
-    GHashTableIter iter;
-    gpointer key, value;
-    g_hash_table_iter_init(&iter, self->schedule.globalchanges);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        time_t date = (time_t)key;
-        PyTransaction *txn_py = _PyTransaction_from_txn((Transaction *)value);
-        PyObject *date_py = time2pydate(date);
-        PyDict_SetItem(res, date_py, (PyObject *)txn_py);
-        Py_DECREF(date_py);
-        Py_DECREF(txn_py);
+    if (schedule_eq(&self->schedule, &other->schedule)) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
     }
-    return res;
 }
 
 /* PyTransactionList */
@@ -3891,6 +3885,7 @@ static PyMethodDef PyTransaction_methods[] = {
     {"assign_imbalance", (PyCFunction)PyTransaction_assign_imbalance, METH_O, ""},
     {"balance", (PyCFunction)PyTransaction_balance, METH_VARARGS, ""},
     {"change", (PyCFunction)PyTransaction_change, METH_VARARGS|METH_KEYWORDS, ""},
+    {"check_eq", (PyCFunction)PyTransaction_check_eq, METH_O, ""},
     {"copy_from", (PyCFunction)PyTransaction_copy_from, METH_O, ""},
     {"mct_balance", (PyCFunction)PyTransaction_mct_balance, METH_VARARGS, ""},
     {"move_split", (PyCFunction)PyTransaction_move_split, METH_VARARGS, ""},
@@ -3987,6 +3982,7 @@ static PyMethodDef PyRecurrence_methods[] = {
     {"affected_accounts", (PyCFunction)PyRecurrence_affected_accounts, METH_NOARGS, ""},
     {"change", (PyCFunction)PyRecurrence_change, METH_VARARGS|METH_KEYWORDS, ""},
     {"change_globally", (PyCFunction)PyRecurrence_change_globally, METH_O, ""},
+    {"check_eq", (PyCFunction)PyRecurrence_check_eq, METH_O, ""},
     {"contains_spawn", (PyCFunction)PyRecurrence_contains_spawn, METH_O, ""},
     {"delete_at", (PyCFunction)PyRecurrence_delete_at, METH_O, ""},
     {"replicate", (PyCFunction)PyRecurrence_replicate, METH_NOARGS, ""},
@@ -4000,8 +3996,6 @@ static PyGetSetDef PyRecurrence_getseters[] = {
     {"repeat_type", (getter)PyRecurrence_repeat_type, NULL, NULL, NULL},
     {"repeat_every", (getter)PyRecurrence_repeat_every, NULL, NULL, NULL},
     {"ref", (getter)PyRecurrence_ref, NULL, NULL, NULL},
-    {"date2exception", (getter)PyRecurrence_date2exception, NULL, NULL, NULL},
-    {"date2globalchange", (getter)PyRecurrence_date2globalchange, NULL, NULL, NULL},
     {0, 0, 0, 0, 0},
 };
 

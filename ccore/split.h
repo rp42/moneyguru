@@ -23,6 +23,9 @@ split_init(
     Split *split, Account *account, const Amount *amount, unsigned int index);
 
 void
+split_deinit(Split *split);
+
+void
 split_account_set(Split *split, Account *account);
 
 void
@@ -31,6 +34,7 @@ split_amount_set(Split *split, const Amount *amount);
 bool
 split_copy(Split *dst, const Split *src);
 
-void
-split_deinit(Split *split);
+// Returns whether s1 and s2 are equal
+bool
+split_eq(const Split *s1, const Split *s2);
 

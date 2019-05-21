@@ -185,6 +185,10 @@ transaction_cmp(const Transaction *a, const Transaction *b);
 bool
 transaction_copy(Transaction *dst, const Transaction *src);
 
+// Returns whether two transactions are the same
+bool
+transaction_eq(const Transaction *a, const Transaction *b);
+
 // Returns whether splits hold more than one currency
 bool
 transaction_is_mct(const Transaction *txn);

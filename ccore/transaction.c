@@ -392,6 +392,42 @@ transaction_copy(Transaction *dst, const Transaction *src)
 }
 
 bool
+transaction_eq(const Transaction *a, const Transaction *b)
+{
+    if (a->date != b->date) {
+        return false;
+    }
+    if (strcmp(a->description, b->description) != 0) {
+        return false;
+    }
+    if (strcmp(a->payee, b->payee) != 0) {
+        return false;
+    }
+    if (strcmp(a->checkno, b->checkno) != 0) {
+        return false;
+    }
+    if (strcmp(a->notes, b->notes) != 0) {
+        return false;
+    }
+    if (a->splitcount != b->splitcount) {
+        return false;
+    }
+    for (int i=0; i<a->splitcount; i++) {
+        // We don't require splits to be in the same order
+        bool found = false;
+        for (int j=0; j<b->splitcount; j++) {
+            if (split_eq(&a->splits[i], &b->splits[j])) {
+                found = true;
+            }
+        }
+        if (!found) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
 transaction_is_mct(const Transaction *txn)
 {
     if (txn->splitcount < 2) {

@@ -31,6 +31,11 @@ amount_check(const Amount *first, const Amount *second);
 bool
 amount_same_side(const Amount *a, const Amount *b);
 
+// Return whether two amounts are the same
+bool
+amount_eq(const Amount *first, const Amount *second);
+
+
 /* Returns a formatted string from `amount`.
 
 From a regular amount, will return (depending on the options of course),

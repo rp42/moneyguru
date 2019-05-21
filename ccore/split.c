@@ -14,6 +14,13 @@ split_init(
 }
 
 void
+split_deinit(Split *split)
+{
+    strfree(&split->memo);
+    strfree(&split->reference);
+}
+
+void
 split_account_set(Split *split, Account *account)
 {
     if (account != split->account) {
@@ -46,9 +53,30 @@ split_copy(Split *dst, const Split *src)
     return true;
 }
 
-void
-split_deinit(Split *split)
+bool
+split_eq(const Split *s1, const Split *s2)
 {
-    strfree(&split->memo);
-    strfree(&split->reference);
+    if (s1->account == NULL) {
+        if (s2->account != NULL) {
+            return false;
+        }
+    } else {
+        if (s2->account == NULL) {
+            return false;
+        } else if (strcmp(s1->account->name, s2->account->name) != 0) {
+            return false;
+        }
+    }
+    return true;
+    if (!amount_eq(&s1->amount, &s2->amount)) {
+        return false;
+    }
+    /*if (strcmp(s1->memo, s2->memo) != 0) {*/
+    /*    return false;                     */
+    /*}                                     */
+    /*if (s1->reconciliation_date != s2->reconciliation_date) {*/
+    /*    return false;                                        */
+    /*}                                                        */
+    return true;
 }
+

@@ -88,6 +88,43 @@ schedule_delete_at(Schedule *sched, time_t date)
 }
 
 bool
+schedule_eq(const Schedule *a, const Schedule *b)
+{
+    if (a->type != b->type) {
+        return false;
+    }
+    if (a->stop != b->stop) {
+        return false;
+    }
+    if (a->every != b->every) {
+        return false;
+    }
+    if (!transaction_eq(&a->ref, &b->ref)) {
+        return false;
+    }
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, a->deletions);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        if (!g_hash_table_contains(b->deletions, key)) {
+            return false;
+        }
+    }
+    g_hash_table_iter_init(&iter, a->globalchanges);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        Transaction *aref = value;
+        Transaction *bref = g_hash_table_lookup(b->globalchanges, key);
+        if (bref == NULL) {
+            return false;
+        }
+        if (!transaction_eq(aref, bref)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
 schedule_is_alive(Schedule *sched)
 {
     if (sched->stop == 0) {

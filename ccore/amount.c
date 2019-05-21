@@ -121,6 +121,17 @@ amount_same_side(const Amount *a, const Amount *b)
     return (a->val > 0) == (b->val > 0);
 }
 
+bool
+amount_eq(const Amount *first, const Amount *second)
+{
+    if (first->currency != second->currency) {
+        return false;
+    }
+    if (first->val != second->val) {
+        return false;
+    }
+    return true;
+}
 
 int64_t
 amount_slide(int64_t val, uint8_t fromexp, uint8_t toexp)
