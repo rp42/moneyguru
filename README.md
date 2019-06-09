@@ -11,6 +11,29 @@ right one), your important financial data (net worth, profit) is constantly
 up-to-date and "in your face". This allows you to constantly make informed
 decision rather than doing so periodically.
 
+# Unmaintained
+
+This project has been on life support for a while, but I still maintained it
+because I still used it. Not any more.
+
+As I write in the context of [my new primary (very niche)
+project](https://collapseos.org), I believe that current modern technology is
+unsustainable, lacks resilience, and is on course for collapse within the decade
+(or two. I tend to be overly pessimistic). I'm in the process of severing my
+ties to it and I've reverted to physical paper accounting. Simplicity over
+efficiency feels good.
+
+This makes this project unmaintained. It was in the middle of a rewrite that was
+going well, but still had some problems compared to the 2.13.1 release.
+
+Users, until you find a replacement, I recommend that you use 2.13.1.
+
+If anyone wants to fork this, please do! If it looks good, I'll be happy to
+link to the fork. I think it would be a good idea to change the name.
+
+If the forker is more of a Python person, she would probably want to fork from
+2.11. If she prefers C, then she can fork from master.
+
 # The great C rewrite
 
 If you look at recent commits in this project, you'll notice that there a
@@ -57,40 +80,6 @@ Users shouldn't suffer much from the rewrite: test coverage is very good and I
 still use this app for my own personal needs, so it's not going to end up with
 glaring post-rewrite problems. Users *will*, on the other hand, benefit from
 decreased resource usage and increased speed.
-
-# Current status: People wanted
-
-moneyGuru has currently only one maintainer, me. This is a dangerous situation
-that needs to be corrected.
-
-The goal is to eventually have another active maintainer, but before we can get
-there, the project needs more contributors.
-
-Whatever your skills, if you are remotely interestested in being a contributor,
-I'm interested in mentoring you. If that's the case, please refer to [the open
-ticket on the subject][contrib-issue] and let's get started.
-
-## Windows? Mac OS? gone
-
-moneyGuru used to run on Windows and Mac OS, but I haven't had a Windows or
-MacOS setup in years, I can't (and don't want to) produce builds for these
-targets any more.
-
-I don't purposefully remove platform-agnostic mechanics, but when they stand in
-my way, I scrap them (can't test? worthless code) and I've been doing that for
-a while now. As a result, this app pretty much became a GNU/Linux app.
-
-There have been unsuccessful attempts from some people in the past to pick these
-platforms up. Didn't work. The challenge becomes greater as time passes.
-
-Still, if you're interested in reviving a platform, go ahead. If you get far
-enough, I'll be delighted to point to your builds as the official ones. I'll
-also be glad to reinstate platform-agnostic mechanics in the core code.
-
-What used to be the Cocoa UI of moneyGuru is hosted in a separate repo:
-https://github.com/hsoft/moneyguru-cocoa
-
-The Windows version used Qt, so it didn't have a separate UI codebase.
 
 # Contents of this folder
 
