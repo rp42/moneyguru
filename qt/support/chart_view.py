@@ -80,7 +80,7 @@ class ChartView(QWidget):
         # circleRect is the area that the pie drawing use for bounds
         circleRect = QRectF(centerX - radius, centerY - radius, diameter, diameter)
         # pie slices have to be drawn with 1/16th of an angle as argument
-        painter.drawPie(circleRect, start_angle*16, span_angle*16)
+        painter.drawPie(circleRect, int(start_angle*16), int(span_angle*16))
 
     def draw_polygon(self, points, pen, brush):
         points = [QPointF(*self.flipPoint(p)) for p in points]
