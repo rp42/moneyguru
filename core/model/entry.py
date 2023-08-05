@@ -8,7 +8,8 @@
 
 import bisect
 import datetime
-from collections import defaultdict, Sequence
+from collections import defaultdict
+from collections.abc import Sequence
 from itertools import takewhile
 
 from hscommon.util import flatten
