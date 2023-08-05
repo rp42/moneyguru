@@ -1,3 +1,7 @@
+This package has been unmaintained for many years now. The original now looks deleted fro github.
+
+This is a fork with minimal fixes to work on a modern Ubuntu system from the 2.12.0 version.
+
 # moneyGuru
 
 [![Build Status](https://travis-ci.org/hsoft/moneyguru.svg?branch=master)](https://travis-ci.org/hsoft/moneyguru)
